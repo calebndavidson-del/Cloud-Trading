@@ -1,0 +1,35 @@
+{
+  "providers": {
+    "yahoo_finance": {
+      "enabled": true,
+      "priority": 1,
+      "timeout": 10,
+      "base_url": "https://query1.finance.yahoo.com/v8/finance/chart/",
+      "api_key": null
+    },
+    "alpha_vantage": {
+      "enabled": true,
+      "priority": 2,
+      "timeout": 15,
+      "base_url": "https://www.alphavantage.co/query",
+      "api_key": "ALPHA_VANTAGE_API_KEY"
+    },
+    "iex_cloud": {
+      "enabled": true,
+      "priority": 3,
+      "timeout": 12,
+      "base_url": "https://cloud.iexapis.com/stable/stock/",
+      "api_key": "IEX_CLOUD_API_KEY"
+    }
+  },
+  "fallback_settings": {
+    "max_retries": 3,
+    "retry_delay": 1.0,
+    "cache_duration": 60
+  },
+  "data_settings": {
+    "default_symbols": ["AAPL", "GOOGL", "MSFT", "AMZN", "TSLA"],
+    "fields": ["price", "volume", "change", "change_percent", "high", "low", "open", "previous_close"],
+    "update_interval": 30
+  }
+}
