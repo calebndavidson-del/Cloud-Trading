@@ -3,7 +3,7 @@ Main scanning and trading bot logic.
 - Scans Yahoo Finance and other APIs for top stocks and trends.
 - Orchestrates data collection, optimization, and paper trading.
 """
-from backend.data_collector import fetch_market_data
+from backend_data_collector_Version2 import fetch_market_data
 
 def run_bot():
     # Example: Collect market data, analyze, and print
