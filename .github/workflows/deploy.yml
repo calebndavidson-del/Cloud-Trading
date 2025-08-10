@@ -4,7 +4,7 @@
 
 name: Deploy Cloud Trading Bot
 
-on:
+"on":
   push:
     branches: [ main ]
   workflow_dispatch:
