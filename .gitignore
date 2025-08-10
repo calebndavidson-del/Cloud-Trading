@@ -109,6 +109,22 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+.env.local
+.env.production
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+terraform_outputs.json
+tfplan
+
+# AWS
+.aws/
+
+# Docker
+.dockerignore
 
 # Spyder project settings
 .spyderproject
@@ -133,6 +149,7 @@ dmypy.json
 .idea/
 *.swp
 *.swo
+*~
 
 # OS
 .DS_Store
@@ -142,6 +159,17 @@ dmypy.json
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Lambda deployment packages
+lambda_deployment.zip
+/tmp/
+
+# Local test files
+test_local.py
 
 # Temporary files
 tmp/
