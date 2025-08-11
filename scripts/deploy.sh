@@ -5,6 +5,12 @@
 
 set -e  # Exit on any error
 
+# Function to print error and exit
+function error_exit() {
+    echo "❌ $1"
+    exit 1
+}
+
 # Configuration
 PROJECT_NAME="cloud-trading-bot"
 AWS_REGION="${AWS_REGION:-us-west-2}"
@@ -16,31 +22,35 @@ echo "Region: $AWS_REGION"
 echo "Environment: $ENVIRONMENT"
 echo ""
 
+# Save original directory
+ORIGINAL_DIR="$(pwd)"
+
 # Check prerequisites
 echo "📋 Checking prerequisites..."
 
 # Check if AWS CLI is installed and configured
 if ! command -v aws &> /dev/null; then
-    echo "❌ AWS CLI is not installed. Please install it first."
-    exit 1
+    error_exit "AWS CLI is not installed. Please install it first."
 fi
 
 # Check if Terraform is installed
 if ! command -v terraform &> /dev/null; then
-    echo "❌ Terraform is not installed. Please install it first."
-    exit 1
+    error_exit "Terraform is not installed. Please install it first."
 fi
 
 # Check if Docker is installed
 if ! command -v docker &> /dev/null; then
-    echo "❌ Docker is not installed. Please install it first."
-    exit 1
+    error_exit "Docker is not installed. Please install it first."
+fi
+
+# Check if pip is installed
+if ! command -v pip &> /dev/null; then
+    error_exit "pip is not installed. Please install it first."
 fi
 
 # Verify AWS credentials
 if ! aws sts get-caller-identity &> /dev/null; then
-    echo "❌ AWS credentials not configured. Please run 'aws configure' first."
-    exit 1
+    error_exit "AWS credentials not configured. Please run 'aws configure' first."
 fi
 
 echo "✅ Prerequisites check passed"
@@ -49,6 +59,19 @@ echo ""
 # Create Lambda deployment package
 echo "📦 Creating Lambda deployment package..."
 cd "$(dirname "$0")/.."
+
+# Check for backend and aws directories
+if [ ! -d "backend" ]; then
+    error_exit "'backend' directory not found in project root."
+fi
+if [ ! -d "aws" ]; then
+    error_exit "'aws' directory not found in project root."
+fi
+
+# Check for infrastructure/terraform directory
+if [ ! -d "infrastructure/terraform" ]; then
+    error_exit "'infrastructure/terraform' directory not found."
+fi
 
 # Create temporary directory for Lambda package
 rm -rf /tmp/lambda_package
@@ -69,15 +92,20 @@ EOF
 
 # Install dependencies
 cd /tmp/lambda_package
-pip install -r requirements.txt -t .
+pip install -r requirements.txt -t . || error_exit "pip install failed."
+
+# Check for zip utility
+if ! command -v zip &> /dev/null; then
+    error_exit "zip utility is not installed. Please install it first."
+fi
 
 # Create zip file
 zip -r lambda_deployment.zip . -x "*.pyc" "*/__pycache__/*"
 
 # Move zip to terraform directory
-mv lambda_deployment.zip "$(dirname "$0")/../infrastructure/terraform/"
+mv lambda_deployment.zip "$ORIGINAL_DIR/infrastructure/terraform/"
 
-cd "$(dirname "$0")/.."
+cd "$ORIGINAL_DIR"
 echo "✅ Lambda package created"
 echo ""
 
@@ -107,7 +135,9 @@ echo "📊 Deployment outputs:"
 terraform output
 
 # Store outputs for later use
-terraform output -json > terraform_outputs.json
+if ! terraform output -json > terraform_outputs.json; then
+    error_exit "Failed to write terraform_outputs.json"
+fi
 
 echo ""
 echo "✅ Infrastructure deployment completed"
@@ -117,7 +147,7 @@ echo ""
 echo "🐳 Building and pushing Docker image..."
 
 # Get ECR repository URL from Terraform output
-ECR_REPO_URL=$(terraform output -raw ecr_repository_url)
+ECR_REPO_URL=$(terraform output -raw ecr_repository_url 2>/dev/null || true)
 
 if [ -n "$ECR_REPO_URL" ]; then
     echo "ECR Repository: $ECR_REPO_URL"
@@ -126,7 +156,10 @@ if [ -n "$ECR_REPO_URL" ]; then
     aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REPO_URL
     
     # Build Docker image
-    cd ../..
+    cd "$ORIGINAL_DIR"
+    if [ ! -f "infrastructure/docker/Dockerfile" ]; then
+        error_exit "'infrastructure/docker/Dockerfile' not found."
+    fi
     docker build -f infrastructure/docker/Dockerfile -t $PROJECT_NAME-strategy .
     
     # Tag and push image
@@ -135,7 +168,7 @@ if [ -n "$ECR_REPO_URL" ]; then
     
     echo "✅ Docker image pushed to ECR"
 else
-    echo "⚠️  ECR repository URL not found in Terraform outputs"
+    echo "⚠️  ECR repository URL not found in Terraform outputs. Skipping Docker build and push."
 fi
 
 echo ""
@@ -153,4 +186,5 @@ echo "- View ECS logs: aws logs tail /aws/ecs/$PROJECT_NAME-strategy --follow"
 echo "- Update ECS service: aws ecs update-service --cluster $PROJECT_NAME-cluster --service $PROJECT_NAME-strategy-service --desired-count 1"
 echo ""
 
-cd infrastructure/terraform
+# Restore original directory
+cd "$ORIGINAL_DIR"
