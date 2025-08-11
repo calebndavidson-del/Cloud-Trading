@@ -125,6 +125,48 @@ terraform import aws_cloudwatch_log_group.lambda_logs "/aws/lambda/cloud-trading
 terraform import aws_cloudwatch_log_group.ecs_logs "/aws/ecs/cloud-trading-bot-strategy"
 ```
 
+## 🚫 AWS Reserved Environment Variables
+
+### InvalidParameterValueException for AWS_REGION
+
+**Error:**
+```
+InvalidParameterValueException: The environment variable 'AWS_REGION' is reserved by the Lambda runtime and cannot be set by the customer.
+```
+
+**Root Cause:**
+AWS Lambda automatically provides certain environment variables like `AWS_REGION`, `AWS_LAMBDA_FUNCTION_NAME`, etc. These cannot be explicitly set in the Terraform configuration.
+
+**Solution:**
+1. Remove reserved environment variables from the Lambda function's environment block:
+   ```hcl
+   # ❌ Don't do this:
+   environment {
+     variables = {
+       AWS_REGION = var.aws_region  # This causes the error
+     }
+   }
+   
+   # ✅ Do this instead:
+   environment {
+     variables = {
+       ENV = var.environment
+       # AWS_REGION is automatically provided by AWS
+     }
+   }
+   ```
+
+2. Your Lambda function code can still access `AWS_REGION` using `os.getenv("AWS_REGION")` - it will be automatically available.
+
+**Reserved Environment Variables (Cannot be set manually):**
+- `AWS_REGION`
+- `AWS_LAMBDA_FUNCTION_NAME`
+- `AWS_LAMBDA_FUNCTION_VERSION`
+- `AWS_LAMBDA_LOG_GROUP_NAME`
+- `AWS_LAMBDA_LOG_STREAM_NAME`
+- `_AWS_XRAY_TRACING_NAME`
+- And others starting with `AWS_` or `_AWS`
+
 ## 🔄 State Management Best Practices
 
 ### Set Up Remote State Backend
