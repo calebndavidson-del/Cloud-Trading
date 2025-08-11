@@ -7,7 +7,7 @@ set -e  # Exit on any error
 
 # Configuration
 PROJECT_NAME="cloud-trading-bot"
-AWS_REGION="${AWS_REGION:-us-east-1}"
+AWS_REGION="${AWS_REGION:-us-west-2}"
 ENVIRONMENT="${ENVIRONMENT:-prod}"
 
 echo "🚀 Starting AWS Trading Bot Deployment"
