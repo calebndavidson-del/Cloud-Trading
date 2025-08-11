@@ -30,7 +30,7 @@ A sophisticated, cloud-native trading bot with a fully managed AWS backend infra
 
 ### Prerequisites
 
-1. **AWS Account** with appropriate permissions
+1. **AWS Account** with appropriate permissions (see [Required IAM Permissions](#-required-iam-permissions))
 2. **AWS CLI** installed and configured
 3. **Terraform** (>= 1.0) for infrastructure deployment
 4. **Docker** for container builds
@@ -82,6 +82,119 @@ aws logs tail /aws/ecs/cloud-trading-bot-strategy --follow
 # Check DynamoDB tables
 aws dynamodb scan --table-name cloud-trading-bot-trades --limit 10
 ```
+
+## 🔐 Required IAM Permissions
+
+### Terraform Deployment Permissions
+
+The IAM user or role used for Terraform deployment requires specific permissions to create and manage AWS resources. The most critical permission that users often encounter issues with is:
+
+```json
+{
+  "Effect": "Allow",
+  "Action": ["ec2:DescribeAvailabilityZones"],
+  "Resource": "*"
+}
+```
+
+This permission is required because the Terraform configuration uses the `aws_availability_zones` data source to create subnets across multiple availability zones.
+
+### Complete IAM Policy
+
+Two IAM policy options are provided in the repository:
+
+📄 **[infrastructure/terraform-iam-policy.json](infrastructure/terraform-iam-policy.json)** - Full permissions (recommended for simplicity)
+
+📄 **[infrastructure/terraform-iam-policy-minimal.json](infrastructure/terraform-iam-policy-minimal.json)** - Minimal permissions (recommended for production)
+
+Both policies include all necessary permissions for:
+- **EC2**: VPC, subnets, security groups, availability zones
+- **ECS**: Cluster, services, task definitions  
+- **ECR**: Container registry
+- **IAM**: Roles and policies for services
+- **Lambda**: Functions and execution
+- **DynamoDB**: Tables and indexes
+- **S3**: Buckets and objects
+- **Secrets Manager**: Secrets and versions
+- **CloudWatch**: Logs and monitoring
+- **EventBridge**: Scheduled events
+
+The minimal policy uses more restrictive resource constraints and only includes the specific actions needed for this project.
+
+### Setting Up IAM Permissions
+
+#### Option 1: Attach Policy to Existing User/Role
+
+```bash
+# Option A: Use the full permissions policy (easier setup)
+aws iam create-policy \
+  --policy-name CloudTradingBotTerraformPolicy \
+  --policy-document file://infrastructure/terraform-iam-policy.json
+
+# Option B: Use the minimal permissions policy (more secure)
+aws iam create-policy \
+  --policy-name CloudTradingBotTerraformPolicyMinimal \
+  --policy-document file://infrastructure/terraform-iam-policy-minimal.json
+
+# Attach to your user (replace with your username and chosen policy)
+aws iam attach-user-policy \
+  --user-name your-terraform-user \
+  --policy-arn arn:aws:iam::YOUR-ACCOUNT-ID:policy/CloudTradingBotTerraformPolicy
+
+# Or attach to a role (replace with your role name and chosen policy)
+aws iam attach-role-policy \
+  --role-name your-terraform-role \
+  --policy-arn arn:aws:iam::YOUR-ACCOUNT-ID:policy/CloudTradingBotTerraformPolicy
+```
+
+#### Option 2: Create New IAM User for Terraform
+
+```bash
+# Create a new user for Terraform
+aws iam create-user --user-name terraform-cloud-trading-bot
+
+# Create and attach the policy (choose full or minimal)
+aws iam create-policy \
+  --policy-name CloudTradingBotTerraformPolicy \
+  --policy-document file://infrastructure/terraform-iam-policy.json
+
+aws iam attach-user-policy \
+  --user-name terraform-cloud-trading-bot \
+  --policy-arn arn:aws:iam::YOUR-ACCOUNT-ID:policy/CloudTradingBotTerraformPolicy
+
+# Create access keys
+aws iam create-access-key --user-name terraform-cloud-trading-bot
+```
+
+#### Option 3: Use AWS CLI Profiles
+
+```bash
+# Configure a profile with the Terraform user credentials
+aws configure --profile terraform-cloud-trading-bot
+
+# Use the profile for deployment
+export AWS_PROFILE=terraform-cloud-trading-bot
+./scripts/deploy.sh
+```
+
+### Troubleshooting Permission Issues
+
+If you encounter permission errors during deployment:
+
+1. **Check the specific error**: The error message will indicate which permission is missing
+2. **Verify current permissions**: Use `aws iam get-user-policy` or `aws iam list-attached-user-policies`
+3. **Add missing permissions**: Update your IAM policy to include the required actions
+4. **Common missing permissions**:
+   - `ec2:DescribeAvailabilityZones` - Required for subnet creation
+   - `iam:PassRole` - Required for service role creation
+   - `logs:CreateLogGroup` - Required for CloudWatch log groups
+
+### Security Best Practices
+
+- **Principle of Least Privilege**: Only grant permissions necessary for deployment
+- **Separate Users**: Use a dedicated IAM user or role for Terraform operations
+- **Temporary Credentials**: Consider using AWS STS assume-role for temporary access
+- **Policy Versioning**: Keep track of policy changes and test in non-production first
 
 ## 📁 Project Structure
 
