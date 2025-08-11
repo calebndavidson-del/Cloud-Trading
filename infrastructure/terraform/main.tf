@@ -40,6 +40,12 @@ variable "project_name" {
   default     = "cloud-trading-bot"
 }
 
+variable "lambda_s3_key" {
+  description = "S3 key for Lambda deployment package"
+  type        = string
+  default     = "lambda/lambda_deployment.zip"
+}
+
 # Data sources
 data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
@@ -58,6 +64,21 @@ resource "aws_s3_bucket" "trading_bot_logs" {
 
 resource "aws_s3_bucket" "trading_bot_data" {
   bucket = "${var.project_name}-data-${random_string.suffix.result}"
+}
+
+# S3 bucket for Lambda deployment packages
+resource "aws_s3_bucket" "lambda_deployment" {
+  bucket = "${var.project_name}-lambda-deployment-${random_string.suffix.result}"
+}
+
+# Block public access for Lambda deployment bucket
+resource "aws_s3_bucket_public_access_block" "lambda_deployment_pab" {
+  bucket = aws_s3_bucket.lambda_deployment.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
 }
 
 resource "aws_s3_bucket_versioning" "trading_bot_logs_versioning" {
@@ -235,7 +256,9 @@ resource "aws_iam_role_policy" "lambda_policy" {
           aws_s3_bucket.trading_bot_logs.arn,
           "${aws_s3_bucket.trading_bot_logs.arn}/*",
           aws_s3_bucket.trading_bot_data.arn,
-          "${aws_s3_bucket.trading_bot_data.arn}/*"
+          "${aws_s3_bucket.trading_bot_data.arn}/*",
+          aws_s3_bucket.lambda_deployment.arn,
+          "${aws_s3_bucket.lambda_deployment.arn}/*"
         ]
       },
       {
@@ -261,8 +284,12 @@ resource "aws_cloudwatch_log_group" "ecs_logs" {
 }
 
 # Lambda Function
+# Uses S3-based deployment for packages >70MB support
 resource "aws_lambda_function" "market_data_fetcher" {
-  filename      = "lambda_deployment.zip"
+  # S3-based deployment configuration
+  s3_bucket     = aws_s3_bucket.lambda_deployment.bucket
+  s3_key        = var.lambda_s3_key
+  
   function_name = "${var.project_name}-market-data-fetcher-${random_string.suffix.result}"
   role          = aws_iam_role.lambda_role.arn
   handler       = "lambda_market_data.lambda_handler"
@@ -270,9 +297,13 @@ resource "aws_lambda_function" "market_data_fetcher" {
   timeout       = 300
   memory_size   = 512
 
+  # Track changes to the deployment package
+  source_code_hash = filebase64sha256("lambda_deployment.zip")
+
   depends_on = [
     aws_iam_role_policy.lambda_policy,
     aws_cloudwatch_log_group.lambda_logs,
+    aws_s3_bucket.lambda_deployment,
   ]
 
   environment {
@@ -313,6 +344,16 @@ resource "aws_lambda_permission" "allow_eventbridge" {
 # Outputs
 output "lambda_function_name" {
   value = aws_lambda_function.market_data_fetcher.function_name
+}
+
+output "lambda_deployment_bucket" {
+  value       = aws_s3_bucket.lambda_deployment.bucket
+  description = "S3 bucket for Lambda deployment packages"
+}
+
+output "lambda_s3_key" {
+  value       = var.lambda_s3_key
+  description = "S3 key for Lambda deployment package"
 }
 
 output "s3_logs_bucket" {

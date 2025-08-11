@@ -102,7 +102,7 @@ fi
 # Create zip file
 zip -r lambda_deployment.zip . -x "*.pyc" "*/__pycache__/*"
 
-# Move zip to terraform directory
+# Move zip to terraform directory (for source_code_hash calculation)
 mv lambda_deployment.zip "$ORIGINAL_DIR/infrastructure/terraform/"
 
 cd "$ORIGINAL_DIR"
@@ -128,6 +128,34 @@ terraform plan \
 # Apply deployment
 echo "Applying Terraform deployment..."
 terraform apply tfplan
+
+# Upload Lambda deployment package to S3
+echo ""
+echo "📦 Uploading Lambda deployment package to S3..."
+
+# Get S3 bucket and key from Terraform outputs
+LAMBDA_S3_BUCKET=$(terraform output -raw lambda_deployment_bucket 2>/dev/null || true)
+LAMBDA_S3_KEY=$(terraform output -raw lambda_s3_key 2>/dev/null || true)
+
+if [ -n "$LAMBDA_S3_BUCKET" ] && [ -n "$LAMBDA_S3_KEY" ]; then
+    # Use the upload script
+    if "$ORIGINAL_DIR/scripts/upload_lambda_to_s3.sh" "lambda_deployment.zip" "$LAMBDA_S3_BUCKET" "$LAMBDA_S3_KEY" "$AWS_REGION"; then
+        echo "✅ Lambda package uploaded to S3"
+        
+        # Re-apply Terraform to update Lambda function with S3 package
+        echo "🔄 Updating Lambda function with S3 package..."
+        terraform apply -auto-approve \
+            -var="aws_region=$AWS_REGION" \
+            -var="environment=$ENVIRONMENT" \
+            -var="project_name=$PROJECT_NAME"
+        
+        echo "✅ Lambda function updated with S3 package"
+    else
+        error_exit "Failed to upload Lambda package to S3"
+    fi
+else
+    error_exit "Failed to get Lambda S3 bucket or key from Terraform outputs"
+fi
 
 # Get outputs
 echo ""
