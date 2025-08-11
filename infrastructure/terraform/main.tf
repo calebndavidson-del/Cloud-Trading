@@ -287,9 +287,9 @@ resource "aws_cloudwatch_log_group" "ecs_logs" {
 # Uses S3-based deployment for packages >70MB support
 resource "aws_lambda_function" "market_data_fetcher" {
   # S3-based deployment configuration
-  s3_bucket     = aws_s3_bucket.lambda_deployment.bucket
-  s3_key        = var.lambda_s3_key
-  
+  s3_bucket = aws_s3_bucket.lambda_deployment.bucket
+  s3_key    = var.lambda_s3_key
+
   function_name = "${var.project_name}-market-data-fetcher-${random_string.suffix.result}"
   role          = aws_iam_role.lambda_role.arn
   handler       = "lambda_market_data.lambda_handler"
@@ -298,6 +298,7 @@ resource "aws_lambda_function" "market_data_fetcher" {
   memory_size   = 512
 
   # Track changes to the deployment package
+  # Note: lambda_deployment.zip is created by the deployment script
   source_code_hash = filebase64sha256("lambda_deployment.zip")
 
   depends_on = [
@@ -314,8 +315,8 @@ resource "aws_lambda_function" "market_data_fetcher" {
       S3_BUCKET_LOGS        = aws_s3_bucket.trading_bot_logs.bucket
       S3_BUCKET_DATA        = aws_s3_bucket.trading_bot_data.bucket
       SECRETS_MANAGER_ARN   = aws_secretsmanager_secret.trading_bot_secrets.arn
-      AWS_REGION            = var.aws_region
       ENV                   = var.environment
+      # Note: AWS_REGION is automatically provided by AWS Lambda runtime and cannot be set manually
     }
   }
 }
