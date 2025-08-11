@@ -11,7 +11,7 @@ terraform {
 
 provider "aws" {
   region = var.aws_region
-  
+
   default_tags {
     tags = {
       Project     = "Cloud-Trading-Bot"
@@ -97,9 +97,9 @@ resource "aws_s3_bucket_lifecycle_configuration" "trading_bot_logs_lifecycle" {
 
 # DynamoDB Tables
 resource "aws_dynamodb_table" "config" {
-  name           = "${var.project_name}-config"
-  billing_mode   = "PAY_PER_REQUEST"
-  hash_key       = "id"
+  name         = "${var.project_name}-config-${random_string.suffix.result}"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "id"
 
   attribute {
     name = "id"
@@ -112,9 +112,9 @@ resource "aws_dynamodb_table" "config" {
 }
 
 resource "aws_dynamodb_table" "state" {
-  name           = "${var.project_name}-state"
-  billing_mode   = "PAY_PER_REQUEST"
-  hash_key       = "id"
+  name         = "${var.project_name}-state-${random_string.suffix.result}"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "id"
 
   attribute {
     name = "id"
@@ -132,9 +132,9 @@ resource "aws_dynamodb_table" "state" {
 }
 
 resource "aws_dynamodb_table" "trades" {
-  name           = "${var.project_name}-trades"
-  billing_mode   = "PAY_PER_REQUEST"
-  hash_key       = "trade_id"
+  name         = "${var.project_name}-trades-${random_string.suffix.result}"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "trade_id"
 
   attribute {
     name = "trade_id"
@@ -159,7 +159,7 @@ resource "aws_dynamodb_table" "trades" {
 
 # Secrets Manager
 resource "aws_secretsmanager_secret" "trading_bot_secrets" {
-  name                    = "${var.project_name}-secrets"
+  name                    = "${var.project_name}-secrets-${random_string.suffix.result}"
   description             = "API keys and secrets for trading bot"
   recovery_window_in_days = 7
 }
@@ -167,16 +167,16 @@ resource "aws_secretsmanager_secret" "trading_bot_secrets" {
 resource "aws_secretsmanager_secret_version" "trading_bot_secrets_version" {
   secret_id = aws_secretsmanager_secret.trading_bot_secrets.id
   secret_string = jsonencode({
-    yahoo_api_key       = ""
-    alpha_vantage_key   = ""
-    trading_api_key     = ""
-    trading_api_secret  = ""
+    yahoo_api_key      = ""
+    alpha_vantage_key  = ""
+    trading_api_key    = ""
+    trading_api_secret = ""
   })
 }
 
 # IAM Role for Lambda
 resource "aws_iam_role" "lambda_role" {
-  name = "${var.project_name}-lambda-role"
+  name = "${var.project_name}-lambda-role-${random_string.suffix.result}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -193,7 +193,7 @@ resource "aws_iam_role" "lambda_role" {
 }
 
 resource "aws_iam_role_policy" "lambda_policy" {
-  name = "${var.project_name}-lambda-policy"
+  name = "${var.project_name}-lambda-policy-${random_string.suffix.result}"
   role = aws_iam_role.lambda_role.id
 
   policy = jsonencode({
@@ -251,24 +251,24 @@ resource "aws_iam_role_policy" "lambda_policy" {
 
 # CloudWatch Log Groups
 resource "aws_cloudwatch_log_group" "lambda_logs" {
-  name              = "/aws/lambda/${var.project_name}-market-data-fetcher"
+  name              = "/aws/lambda/${var.project_name}-market-data-fetcher-${random_string.suffix.result}"
   retention_in_days = 14
 }
 
 resource "aws_cloudwatch_log_group" "ecs_logs" {
-  name              = "/aws/ecs/${var.project_name}-strategy"
+  name              = "/aws/ecs/${var.project_name}-strategy-${random_string.suffix.result}"
   retention_in_days = 14
 }
 
 # Lambda Function
 resource "aws_lambda_function" "market_data_fetcher" {
-  filename         = "lambda_deployment.zip"
-  function_name    = "${var.project_name}-market-data-fetcher"
-  role            = aws_iam_role.lambda_role.arn
-  handler         = "lambda_market_data.lambda_handler"
-  runtime         = "python3.11"
-  timeout         = 300
-  memory_size     = 512
+  filename      = "lambda_deployment.zip"
+  function_name = "${var.project_name}-market-data-fetcher-${random_string.suffix.result}"
+  role          = aws_iam_role.lambda_role.arn
+  handler       = "lambda_market_data.lambda_handler"
+  runtime       = "python3.11"
+  timeout       = 300
+  memory_size   = 512
 
   depends_on = [
     aws_iam_role_policy.lambda_policy,
@@ -291,7 +291,7 @@ resource "aws_lambda_function" "market_data_fetcher" {
 
 # EventBridge Rule for periodic execution
 resource "aws_cloudwatch_event_rule" "market_data_schedule" {
-  name                = "${var.project_name}-market-data-schedule"
+  name                = "${var.project_name}-market-data-schedule-${random_string.suffix.result}"
   description         = "Trigger market data fetching every 5 minutes during market hours"
   schedule_expression = "rate(5 minutes)"
 }

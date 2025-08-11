@@ -74,7 +74,7 @@ resource "aws_security_group" "ecs_service_sg" {
 
 # ECS Cluster
 resource "aws_ecs_cluster" "trading_bot_cluster" {
-  name = "${var.project_name}-cluster"
+  name = "${var.project_name}-cluster-${random_string.suffix.result}"
 
   setting {
     name  = "containerInsights"
@@ -88,7 +88,7 @@ resource "aws_ecs_cluster" "trading_bot_cluster" {
 
 # IAM Role for ECS Task
 resource "aws_iam_role" "ecs_task_role" {
-  name = "${var.project_name}-ecs-task-role"
+  name = "${var.project_name}-ecs-task-role-${random_string.suffix.result}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -105,7 +105,7 @@ resource "aws_iam_role" "ecs_task_role" {
 }
 
 resource "aws_iam_role_policy" "ecs_task_policy" {
-  name = "${var.project_name}-ecs-task-policy"
+  name = "${var.project_name}-ecs-task-policy-${random_string.suffix.result}"
   role = aws_iam_role.ecs_task_role.id
 
   policy = jsonencode({
@@ -169,7 +169,7 @@ resource "aws_iam_role_policy" "ecs_task_policy" {
 
 # IAM Role for ECS Task Execution
 resource "aws_iam_role" "ecs_execution_role" {
-  name = "${var.project_name}-ecs-execution-role"
+  name = "${var.project_name}-ecs-execution-role-${random_string.suffix.result}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -192,7 +192,7 @@ resource "aws_iam_role_policy_attachment" "ecs_execution_role_policy" {
 
 # ECR Repository for container images
 resource "aws_ecr_repository" "trading_bot_strategy" {
-  name                 = "${var.project_name}-strategy"
+  name                 = "${var.project_name}-strategy-${random_string.suffix.result}"
   image_tag_mutability = "MUTABLE"
 
   image_scanning_configuration {
@@ -206,19 +206,19 @@ resource "aws_ecr_repository" "trading_bot_strategy" {
 
 # ECS Task Definition
 resource "aws_ecs_task_definition" "trading_bot_strategy" {
-  family                   = "${var.project_name}-strategy"
+  family                   = "${var.project_name}-strategy-${random_string.suffix.result}"
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
   cpu                      = "512"
   memory                   = "1024"
   execution_role_arn       = aws_iam_role.ecs_execution_role.arn
-  task_role_arn           = aws_iam_role.ecs_task_role.arn
+  task_role_arn            = aws_iam_role.ecs_task_role.arn
 
   container_definitions = jsonencode([
     {
       name  = "trading-bot-strategy"
       image = "${aws_ecr_repository.trading_bot_strategy.repository_url}:latest"
-      
+
       environment = [
         {
           name  = "DYNAMODB_CONFIG_TABLE"
@@ -278,7 +278,7 @@ resource "aws_ecs_task_definition" "trading_bot_strategy" {
 
 # ECS Service
 resource "aws_ecs_service" "trading_bot_strategy" {
-  name            = "${var.project_name}-strategy-service"
+  name            = "${var.project_name}-strategy-service-${random_string.suffix.result}"
   cluster         = aws_ecs_cluster.trading_bot_cluster.id
   task_definition = aws_ecs_task_definition.trading_bot_strategy.arn
   desired_count   = 1
@@ -305,7 +305,7 @@ resource "aws_ecs_service" "trading_bot_strategy" {
 
 # CloudWatch Alarms for monitoring
 resource "aws_cloudwatch_metric_alarm" "ecs_cpu_utilization" {
-  alarm_name          = "${var.project_name}-ecs-cpu-utilization"
+  alarm_name          = "${var.project_name}-ecs-cpu-utilization-${random_string.suffix.result}"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
   metric_name         = "CPUUtilization"
