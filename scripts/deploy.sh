@@ -81,14 +81,8 @@ mkdir -p /tmp/lambda_package
 cp -r backend /tmp/lambda_package/
 cp -r aws /tmp/lambda_package/
 
-# Copy requirements for Lambda
-cat > /tmp/lambda_package/requirements.txt << EOF
-yfinance
-requests
-boto3
-numpy
-pandas
-EOF
+# Use optimized requirements for Lambda
+cp aws/lambda_requirements.txt /tmp/lambda_package/requirements.txt
 
 # Install dependencies
 cd /tmp/lambda_package
@@ -100,13 +94,28 @@ if ! command -v zip &> /dev/null; then
 fi
 
 # Create zip file
-zip -r lambda_deployment.zip . -x "*.pyc" "*/__pycache__/*"
+echo "Creating Lambda deployment package..."
+zip -r lambda_deployment.zip . -x "*.pyc" "*/__pycache__/*" "*.git*" "*.DS_Store"
+
+# Get package size
+PACKAGE_SIZE=$(du -sh lambda_deployment.zip | cut -f1)
+echo "Lambda package size: $PACKAGE_SIZE"
 
 # Move zip to terraform directory
 mv lambda_deployment.zip "$ORIGINAL_DIR/infrastructure/terraform/"
 
 cd "$ORIGINAL_DIR"
-echo "✅ Lambda package created"
+echo "✅ Lambda package created and ready for S3 deployment"
+echo ""
+
+# Optionally build Lambda layer for heavy dependencies
+read -p "Do you want to build the Lambda layer for heavy dependencies (pandas, numpy, etc.)? [y/N]: " build_layer
+if [[ $build_layer =~ ^[Yy]$ ]]; then
+    echo "🏗️  Building Lambda layer..."
+    ./scripts/build_layer.sh
+else
+    echo "⏭️  Skipping Lambda layer build"
+fi
 echo ""
 
 # Deploy infrastructure with Terraform

@@ -60,6 +60,10 @@ resource "aws_s3_bucket" "trading_bot_data" {
   bucket = "${var.project_name}-data-${random_string.suffix.result}"
 }
 
+resource "aws_s3_bucket" "lambda_deployments" {
+  bucket = "${var.project_name}-lambda-deployments-${random_string.suffix.result}"
+}
+
 resource "aws_s3_bucket_versioning" "trading_bot_logs_versioning" {
   bucket = aws_s3_bucket.trading_bot_logs.id
   versioning_configuration {
@@ -69,6 +73,13 @@ resource "aws_s3_bucket_versioning" "trading_bot_logs_versioning" {
 
 resource "aws_s3_bucket_versioning" "trading_bot_data_versioning" {
   bucket = aws_s3_bucket.trading_bot_data.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_versioning" "lambda_deployments_versioning" {
+  bucket = aws_s3_bucket.lambda_deployments.id
   versioning_configuration {
     status = "Enabled"
   }
@@ -235,7 +246,9 @@ resource "aws_iam_role_policy" "lambda_policy" {
           aws_s3_bucket.trading_bot_logs.arn,
           "${aws_s3_bucket.trading_bot_logs.arn}/*",
           aws_s3_bucket.trading_bot_data.arn,
-          "${aws_s3_bucket.trading_bot_data.arn}/*"
+          "${aws_s3_bucket.trading_bot_data.arn}/*",
+          aws_s3_bucket.lambda_deployments.arn,
+          "${aws_s3_bucket.lambda_deployments.arn}/*"
         ]
       },
       {
@@ -260,15 +273,55 @@ resource "aws_cloudwatch_log_group" "ecs_logs" {
   retention_in_days = 14
 }
 
+# S3 object for Lambda deployment package
+resource "aws_s3_object" "lambda_deployment" {
+  bucket = aws_s3_bucket.lambda_deployments.bucket
+  key    = "lambda_deployment.zip"
+  source = "lambda_deployment.zip"
+  etag   = fileexists("lambda_deployment.zip") ? filemd5("lambda_deployment.zip") : null
+
+  lifecycle {
+    ignore_changes = [source, etag]
+  }
+}
+
+# S3 object for Lambda layer (optional, for future heavy dependencies)
+resource "aws_s3_object" "lambda_layer" {
+  bucket = aws_s3_bucket.lambda_deployments.bucket
+  key    = "lambda_layer.zip"
+  source = "lambda_layer.zip"
+  etag   = fileexists("lambda_layer.zip") ? filemd5("lambda_layer.zip") : null
+
+  lifecycle {
+    ignore_changes = [source, etag]
+  }
+}
+
+# Lambda Layer for heavy dependencies (optional)
+resource "aws_lambda_layer_version" "heavy_dependencies" {
+  count = fileexists("lambda_layer.zip") ? 1 : 0
+  
+  layer_name          = "${var.project_name}-heavy-deps-${random_string.suffix.result}"
+  s3_bucket           = aws_s3_bucket.lambda_deployments.bucket
+  s3_key              = aws_s3_object.lambda_layer.key
+  source_code_hash    = fileexists("lambda_layer.zip") ? filebase64sha256("lambda_layer.zip") : null
+  compatible_runtimes = ["python3.11"]
+  description         = "Heavy dependencies layer for trading bot (pandas, numpy, scikit-learn)"
+}
+
 # Lambda Function
 resource "aws_lambda_function" "market_data_fetcher" {
-  filename      = "lambda_deployment.zip"
+  s3_bucket     = aws_s3_bucket.lambda_deployments.bucket
+  s3_key        = aws_s3_object.lambda_deployment.key
   function_name = "${var.project_name}-market-data-fetcher-${random_string.suffix.result}"
   role          = aws_iam_role.lambda_role.arn
   handler       = "lambda_market_data.lambda_handler"
   runtime       = "python3.11"
   timeout       = 300
   memory_size   = 512
+
+  # Attach layer if it exists
+  layers = length(aws_lambda_layer_version.heavy_dependencies) > 0 ? [aws_lambda_layer_version.heavy_dependencies[0].arn] : []
 
   depends_on = [
     aws_iam_role_policy.lambda_policy,
@@ -321,6 +374,10 @@ output "s3_logs_bucket" {
 
 output "s3_data_bucket" {
   value = aws_s3_bucket.trading_bot_data.bucket
+}
+
+output "s3_lambda_deployments_bucket" {
+  value = aws_s3_bucket.lambda_deployments.bucket
 }
 
 output "dynamodb_config_table" {

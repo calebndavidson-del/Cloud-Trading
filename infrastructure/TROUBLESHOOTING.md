@@ -49,6 +49,58 @@ cd infrastructure/terraform
 ./import-existing-resources.sh
 ```
 
+## 📦 Lambda Package Size Issues
+
+### Lambda Deployment Package Too Large
+
+**Error:**
+```
+RequestEntityTooLargeException: Request must be smaller than 69905067 bytes for the CreateFunction operation
+```
+or
+```
+InvalidParameterValueException: Unzipped size must be smaller than 262144000 bytes
+```
+
+**Solution:**
+The infrastructure now uses S3-based deployment to avoid the 50MB direct upload limit:
+
+1. **Automatic S3 deployment** (handled by the deployment script):
+   ```bash
+   ./scripts/deploy.sh
+   ```
+
+2. **Manual troubleshooting** if needed:
+   ```bash
+   # Check package size
+   du -sh infrastructure/terraform/lambda_deployment.zip
+   
+   # If too large, rebuild with optimized requirements
+   cd /tmp
+   rm -rf lambda_package && mkdir lambda_package
+   cp -r /path/to/backend lambda_package/
+   cp -r /path/to/aws lambda_package/
+   cp aws/lambda_requirements.txt lambda_package/requirements.txt
+   cd lambda_package && pip install -r requirements.txt -t .
+   zip -r lambda_deployment.zip . -x "*.pyc" "*/__pycache__/*"
+   ```
+
+3. **Use Lambda layers for heavy dependencies**:
+   ```bash
+   ./scripts/build_layer.sh  # Optional: for pandas, numpy, etc.
+   ```
+
+### Benefits of S3-based deployment:
+- Supports packages up to 10GB (vs 50MB direct upload limit)
+- Automatic versioning through S3
+- Faster deployments for large packages
+- Better CI/CD integration
+
+### Package size optimization:
+- **Base code**: ~20KB (just Python files)
+- **With minimal deps**: ~5-10MB (yfinance, requests, boto3)
+- **Heavy deps layer**: ~100-200MB (pandas, numpy, scikit-learn) - separate from main package
+
 #### Option 2: Use Different Names
 The updated configuration now includes random suffixes for all resources to prevent conflicts.
 
