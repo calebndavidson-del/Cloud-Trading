@@ -18,10 +18,10 @@ A sophisticated, cloud-native trading bot with a fully managed AWS backend infra
 
 | Service | Purpose | Features |
 |---------|---------|----------|
-| AWS Lambda | Market Data Fetching | Serverless, automatic scaling, scheduled execution |
+| AWS Lambda | Market Data Fetching | Serverless, automatic scaling, scheduled execution, S3-based deployment |
 | Amazon ECS (Fargate) | Strategy Engine | Containerized, always-on, auto-scaling |
 | Amazon DynamoDB | Data Storage | NoSQL, fast queries, TTL for data cleanup |
-| Amazon S3 | Log & Data Archive | Durable storage, lifecycle policies |
+| Amazon S3 | Log & Data Archive + Lambda Packages | Durable storage, lifecycle policies, Lambda deployment |
 | AWS Secrets Manager | API Key Storage | Secure, rotatable secrets |
 | Amazon CloudWatch | Monitoring | Logs, metrics, alarms |
 | Amazon EventBridge | Scheduling | Cron-like triggers for Lambda |
@@ -48,10 +48,25 @@ cd Cloud-Trading
 ```
 
 The deployment script will:
-- Create Lambda deployment package
+- Create Lambda deployment package (supports packages >70MB via S3)
 - Deploy infrastructure using Terraform
+- Upload Lambda package to dedicated S3 bucket
 - Build and push Docker image to ECR
 - Set up all AWS services
+
+#### S3-Based Lambda Deployment
+
+The system uses S3-based deployment for Lambda functions, which provides several advantages:
+- **Large Package Support**: Supports packages up to 250MB (vs 70MB limit for direct uploads)
+- **Reliable Deployment**: More reliable for large packages with dependencies
+- **Version Management**: Better tracking of Lambda package versions
+- **CI/CD Integration**: Easier integration with automated deployment pipelines
+
+The Lambda deployment process:
+1. Creates deployment package with all dependencies
+2. Uploads package to dedicated S3 bucket (`{project-name}-lambda-deployment-{suffix}`)
+3. References S3 object in Lambda function configuration
+4. Automatically updates function when package changes
 
 ### 2. Configure API Keys
 
@@ -82,6 +97,28 @@ aws logs tail /aws/ecs/cloud-trading-bot-strategy --follow
 # Check DynamoDB tables
 aws dynamodb scan --table-name cloud-trading-bot-trades --limit 10
 ```
+
+### 4. Manual Lambda Package Upload (Advanced)
+
+For advanced users who want to upload custom Lambda packages:
+
+```bash
+# Create your custom Lambda package
+zip -r custom_lambda.zip . -x "*.pyc" "*/__pycache__/*"
+
+# Upload to S3 (get bucket name from Terraform outputs)
+./scripts/upload_lambda_to_s3.sh custom_lambda.zip <lambda-bucket-name> lambda/lambda_deployment.zip
+
+# Update Lambda function via Terraform
+cd infrastructure/terraform
+terraform apply -auto-approve
+```
+
+The upload script provides:
+- Package size validation (max 250MB)
+- Upload verification
+- Metadata tagging for tracking
+- Error handling and rollback
 
 ## 🔐 Required IAM Permissions
 
@@ -291,6 +328,7 @@ export AWS_ENDPOINT_URL=http://localhost:4566
 - `DYNAMODB_TRADES_TABLE`: Trades history table name
 - `S3_BUCKET_LOGS`: Logs storage bucket
 - `S3_BUCKET_DATA`: Data storage bucket
+- `LAMBDA_DEPLOYMENT_BUCKET`: Lambda deployment packages bucket
 - `SECRETS_MANAGER_ARN`: Secrets Manager ARN
 - `LAMBDA_FUNCTION_NAME`: Market data Lambda function
 - `ECS_CLUSTER_NAME`: ECS cluster name
