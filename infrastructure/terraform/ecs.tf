@@ -290,10 +290,8 @@ resource "aws_ecs_service" "trading_bot_strategy" {
     assign_public_ip = true
   }
 
-  deployment_configuration {
-    maximum_percent         = 200
-    minimum_healthy_percent = 100
-  }
+  deployment_minimum_healthy_percent = 100
+  deployment_maximum_percent         = 200
 
   tags = {
     Name = "${var.project_name}-strategy-service"

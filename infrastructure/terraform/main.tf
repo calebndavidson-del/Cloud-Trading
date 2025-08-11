@@ -81,6 +81,10 @@ resource "aws_s3_bucket_lifecycle_configuration" "trading_bot_logs_lifecycle" {
     id     = "delete_old_logs"
     status = "Enabled"
 
+    filter {
+      prefix = ""
+    }
+
     expiration {
       days = 30
     }
@@ -143,8 +147,9 @@ resource "aws_dynamodb_table" "trades" {
   }
 
   global_secondary_index {
-    name     = "timestamp-index"
-    hash_key = "timestamp"
+    name            = "timestamp-index"
+    hash_key        = "timestamp"
+    projection_type = "ALL"
   }
 
   tags = {
