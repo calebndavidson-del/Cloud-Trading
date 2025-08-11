@@ -38,9 +38,16 @@ aws iam attach-user-policy \
   --policy-arn arn:aws:iam::YOUR-ACCOUNT-ID:policy/CloudTradingBotTerraformPolicy
 ```
 
-### Critical Permission
+### Required Permissions
 
-The most common error is missing the `ec2:DescribeAvailabilityZones` permission, which is required for the Terraform data source used in subnet creation.
+The minimal policy includes these critical permissions:
+- `ec2:DescribeVpcAttribute` - Required for VPC operations
+- `s3:GetAccelerateConfiguration` - Required for S3 bucket configuration
+- Standard permissions for ECS, Lambda, DynamoDB, IAM, etc.
+
+### Troubleshooting Permissions
+
+If you encounter permission errors, see [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) for detailed solutions.
 
 ## 🚀 Deployment
 
@@ -55,6 +62,25 @@ This will:
 2. Deploy infrastructure using Terraform
 3. Build and push the Docker image to ECR
 4. Set up all AWS services
+
+### Handling Existing Resources
+
+If you encounter "resource already exists" errors:
+
+1. **Use the import script:**
+   ```bash
+   cd infrastructure/terraform
+   ./import-existing-resources.sh
+   ```
+
+2. **Or follow the detailed troubleshooting guide:**
+   See [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) for comprehensive solutions.
+
+### State Management
+
+For production deployments, configure remote state backend:
+1. See `terraform/backend.tf` for setup instructions
+2. This prevents state conflicts and resource duplication issues
 
 ## 📖 For More Details
 
