@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 class AWSServicesManager:
     """Manager class for AWS services integration."""
     
-    def __init__(self, region: str = 'us-east-1'):
+    def __init__(self, region: str = 'us-west-2'):
         self.region = region
         self.dynamodb = boto3.resource('dynamodb', region_name=region)
         self.s3 = boto3.client('s3', region_name=region)
@@ -256,14 +256,14 @@ def create_aws_manager(region: str = None) -> AWSServicesManager:
     Create and return AWS services manager.
     
     Args:
-        region: AWS region (defaults to us-east-1)
+        region: AWS region (defaults to us-west-2)
         
     Returns:
         AWSServicesManager instance
     """
     if region is None:
         import os
-        region = os.getenv('AWS_REGION', 'us-east-1')
+        region = os.getenv('AWS_REGION', 'us-west-2')
     
     return AWSServicesManager(region)
 

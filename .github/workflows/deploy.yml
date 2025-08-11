@@ -20,7 +20,7 @@ name: Deploy Cloud Trading Bot
       aws_region:
         description: 'AWS region for deployment'
         required: false
-        default: 'us-east-1'
+        default: 'us-west-2'
         type: string
 
 jobs:
@@ -41,7 +41,7 @@ jobs:
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ github.event.inputs.aws_region || 'us-east-1' }}
+        aws-region: ${{ github.event.inputs.aws_region || 'us-west-2' }}
         
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
@@ -55,14 +55,14 @@ jobs:
         
     - name: Deploy infrastructure
       env:
-        AWS_REGION: ${{ github.event.inputs.aws_region || 'us-east-1' }}
+        AWS_REGION: ${{ github.event.inputs.aws_region || 'us-west-2' }}
         ENVIRONMENT: ${{ github.event.inputs.environment || 'prod' }}
       run: |
         chmod +x scripts/deploy.sh
         ./scripts/deploy.sh
         
     - name: Upload deployment outputs
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: terraform-outputs

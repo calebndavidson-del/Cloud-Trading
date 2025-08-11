@@ -13,7 +13,7 @@ YAHOO_API_KEY = os.getenv("YAHOO_API_KEY", "")
 ALPHA_VANTAGE_API_KEY = os.getenv("ALPHA_VANTAGE_API_KEY", "")
 
 # AWS Configuration
-AWS_REGION = os.getenv("AWS_REGION", "us-east-1")
+AWS_REGION = os.getenv("AWS_REGION", "us-west-2")
 AWS_PROFILE = os.getenv("AWS_PROFILE", "default")
 
 # DynamoDB Tables

@@ -7,7 +7,7 @@ set -e
 
 # Configuration
 PROJECT_NAME="cloud-trading-bot"
-AWS_REGION="${AWS_REGION:-us-east-1}"
+AWS_REGION="${AWS_REGION:-us-west-2}"
 
 # Colors for output
 RED='\033[0;31m'
