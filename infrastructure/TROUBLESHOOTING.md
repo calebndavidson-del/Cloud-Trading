@@ -254,6 +254,239 @@ For large infrastructures, deploy in stages:
    terraform apply -target=aws_ecs_cluster.trading_bot_cluster
    ```
 
+## 🔧 Manual Terraform Import for Troubleshooting
+
+When the automated import script fails or when you need to manually import specific resources for troubleshooting, follow this step-by-step guide to collect comprehensive output for support requests.
+
+### When to Use Manual Import
+
+Use manual import in these scenarios:
+- The automated `import-existing-resources.sh` script fails
+- You need to import a resource with a custom identifier
+- Debugging import issues for a specific resource type
+- The resource exists but has an unexpected name or configuration
+
+### Step-by-Step Manual Import Process
+
+#### 1. Prepare Your Environment
+```bash
+# Navigate to the Terraform directory
+cd infrastructure/terraform
+
+# Ensure Terraform is initialized
+terraform init
+
+# Verify AWS connectivity
+aws sts get-caller-identity
+```
+
+#### 2. Identify the Resource to Import
+
+First, find the exact resource identifier in AWS:
+```bash
+# For S3 buckets
+aws s3 ls | grep cloud-trading-bot
+
+# For IAM roles  
+aws iam list-roles --query "Roles[?contains(RoleName, 'cloud-trading-bot')].RoleName" --output table
+
+# For DynamoDB tables
+aws dynamodb list-tables --query "TableNames[?contains(@, 'cloud-trading-bot')]" --output table
+
+# For Lambda functions
+aws lambda list-functions --query "Functions[?contains(FunctionName, 'cloud-trading-bot')].FunctionName" --output table
+
+# For ECR repositories
+aws ecr describe-repositories --query "repositories[?contains(repositoryName, 'cloud-trading-bot')].repositoryName" --output table
+```
+
+#### 3. Run Manual Import with Full Output Capture
+
+**Important:** Always capture the complete terminal output, including the command you ran and all resulting output.
+
+```bash
+# Create a log file with timestamp for the troubleshooting session
+LOG_FILE="terraform_import_debug_$(date +%Y%m%d_%H%M%S).log"
+
+# Log your environment and command
+echo "=== TERRAFORM IMPORT TROUBLESHOOTING SESSION ===" | tee -a "$LOG_FILE"
+echo "Date: $(date)" | tee -a "$LOG_FILE"  
+echo "User: $(whoami)" | tee -a "$LOG_FILE"
+echo "AWS Account: $(aws sts get-caller-identity --query Account --output text)" | tee -a "$LOG_FILE"
+echo "AWS Region: $(aws configure get region)" | tee -a "$LOG_FILE"
+echo "Terraform Version: $(terraform version)" | tee -a "$LOG_FILE"
+echo "Working Directory: $(pwd)" | tee -a "$LOG_FILE"
+echo "" | tee -a "$LOG_FILE"
+
+# Example: Import an S3 bucket (replace with your actual resource)
+echo "=== IMPORT COMMAND ===" | tee -a "$LOG_FILE"
+echo "terraform import aws_s3_bucket.lambda_deployment cloud-trading-bot-lambda-deployment-m6x4p8e" | tee -a "$LOG_FILE"
+echo "" | tee -a "$LOG_FILE"
+
+# Run the actual import command and capture all output
+echo "=== COMMAND OUTPUT ===" | tee -a "$LOG_FILE"
+terraform import aws_s3_bucket.lambda_deployment cloud-trading-bot-lambda-deployment-m6x4p8e 2>&1 | tee -a "$LOG_FILE"
+
+# Capture the exit code
+echo "" | tee -a "$LOG_FILE"
+echo "Exit code: $?" | tee -a "$LOG_FILE"
+```
+
+#### 4. Verify Import Results
+```bash
+# Check if the resource is now in state
+echo "=== POST-IMPORT STATE CHECK ===" | tee -a "$LOG_FILE"
+terraform state list | grep -i lambda_deployment | tee -a "$LOG_FILE"
+
+# Show the imported resource details
+echo "=== IMPORTED RESOURCE DETAILS ===" | tee -a "$LOG_FILE"
+terraform state show aws_s3_bucket.lambda_deployment 2>&1 | tee -a "$LOG_FILE"
+
+# Run terraform plan to see if there are any differences
+echo "=== TERRAFORM PLAN AFTER IMPORT ===" | tee -a "$LOG_FILE"
+terraform plan 2>&1 | tee -a "$LOG_FILE"
+```
+
+### Common Manual Import Examples
+
+#### Import S3 Bucket
+```bash
+# Find the bucket name
+aws s3 ls | grep cloud-trading-bot
+
+# Import the bucket
+terraform import aws_s3_bucket.lambda_deployment actual-bucket-name-here
+```
+
+#### Import IAM Role
+```bash
+# Find the role name
+aws iam list-roles --query "Roles[?contains(RoleName, 'cloud-trading-bot')].RoleName" --output text
+
+# Import the role
+terraform import aws_iam_role.lambda_role actual-role-name-here
+```
+
+#### Import DynamoDB Table
+```bash
+# Find the table name
+aws dynamodb list-tables --query "TableNames[?contains(@, 'cloud-trading-bot')]" --output text
+
+# Import the table
+terraform import aws_dynamodb_table.config actual-table-name-here
+```
+
+#### Import Lambda Function
+```bash
+# Find the function name
+aws lambda list-functions --query "Functions[?contains(FunctionName, 'cloud-trading-bot')].FunctionName" --output text
+
+# Import the function
+terraform import aws_lambda_function.market_data_fetcher actual-function-name-here
+```
+
+### How to Report Import Issues
+
+When submitting an issue or support request, include the following information:
+
+#### 1. Complete Log File Content
+Copy the entire content of your log file created above:
+
+```markdown
+## Terraform Import Troubleshooting Log
+
+```bash
+=== TERRAFORM IMPORT TROUBLESHOOTING SESSION ===
+Date: 2024-01-15 14:30:22
+User: myuser  
+AWS Account: 123456789012
+AWS Region: us-west-2
+Terraform Version: Terraform v1.6.4
+Working Directory: /path/to/infrastructure/terraform
+
+=== IMPORT COMMAND ===
+terraform import aws_s3_bucket.lambda_deployment cloud-trading-bot-lambda-deployment-m6x4p8e
+
+=== COMMAND OUTPUT ===
+Error: Cannot import aws_s3_bucket.lambda_deployment: import of this resource is not supported
+```
+
+#### 2. Environment Context
+Provide additional context:
+```markdown
+## Environment Details
+- **Operating System**: Ubuntu 22.04 / macOS 13.0 / Windows 11
+- **Terraform Provider Version**: aws ~> 5.0
+- **AWS CLI Version**: aws-cli/2.13.25
+- **Shell**: bash 5.1.16
+- **Previous Operations**: [Describe what you were doing before the error]
+```
+
+#### 3. Expected vs Actual Behavior
+```markdown
+## Issue Description
+**Expected**: The S3 bucket should be imported into Terraform state without errors.
+
+**Actual**: Import command fails with "import of this resource is not supported" error.
+
+**Impact**: Cannot manage existing S3 bucket with Terraform, preventing infrastructure updates.
+```
+
+### Important Guidelines for Troubleshooting Reports
+
+✅ **DO Include:**
+- **Complete terminal output** - Don't truncate error messages
+- **Full command-line context** - Show the exact commands run
+- **Environment details** - OS, versions, working directory
+- **Error codes and exit codes** - These provide valuable debugging information
+- **Timestamps** - Help correlate with AWS CloudTrail logs
+- **Resource identifiers** - The exact names/IDs you're trying to import
+
+❌ **DON'T Include:**
+- AWS credentials or access keys
+- Account numbers (unless specifically requested)
+- Sensitive configuration values
+- Personal directory paths that might contain private information
+
+### Advanced Debugging Techniques
+
+#### Enable Terraform Debug Logging
+```bash
+# Set debug level logging
+export TF_LOG=DEBUG
+export TF_LOG_PATH="terraform_debug.log"
+
+# Run import with verbose logging
+terraform import aws_s3_bucket.lambda_deployment bucket-name
+
+# Review the debug log
+less terraform_debug.log
+```
+
+#### Check AWS CloudTrail for Permission Issues
+```bash
+# Look for recent API calls that might have failed
+aws logs describe-log-groups --log-group-name-prefix CloudTrail
+
+# Check specific API calls (if CloudTrail is enabled)
+aws logs filter-log-events \
+  --log-group-name /aws/cloudtrail/management-events \
+  --start-time $(date -d '1 hour ago' +%s)000 \
+  --filter-pattern '"errorMessage"'
+```
+
+#### Validate Resource Configuration
+```bash
+# Check if the Terraform resource configuration is correct
+terraform validate
+
+# Format configuration files
+terraform fmt
+
+# Check for provider version compatibility
+terraform providers
+```
+
 ## 🔍 Common Debug Commands
 
 ### Check Resource Status
