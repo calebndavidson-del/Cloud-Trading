@@ -607,13 +607,18 @@ aws s3 ls s3://$(terraform output -raw lambda_deployment_bucket)/$(terraform out
 - `DYNAMODB_CONFIG_TABLE`: Configuration table name
 - `DYNAMODB_STATE_TABLE`: State storage table name
 - `DYNAMODB_TRADES_TABLE`: Trades history table name
-- `S3_BUCKET_LOGS`: Logs storage bucket
-- `S3_BUCKET_DATA`: Data storage bucket
-- `LAMBDA_DEPLOYMENT_BUCKET`: Lambda deployment packages bucket
+- `S3_BUCKET_LOGS`: Logs storage bucket (uses cloud-trading-bot-lambda-deployment-m6x4p8e)
+- `S3_BUCKET_DATA`: Data storage bucket (uses cloud-trading-bot-lambda-deployment-m6x4p8e)
+- `LAMBDA_DEPLOYMENT_BUCKET`: Lambda deployment packages bucket (cloud-trading-bot-lambda-deployment-m6x4p8e)
 - `SECRETS_MANAGER_ARN`: Secrets Manager ARN
 - `LAMBDA_FUNCTION_NAME`: Market data Lambda function
 - `ECS_CLUSTER_NAME`: ECS cluster name
 - `ECS_SERVICE_NAME`: ECS service name
+
+**Note**: All S3 operations use the single bucket `cloud-trading-bot-lambda-deployment-m6x4p8e` with organized prefixes:
+- `lambda/` - Lambda deployment packages
+- `logs/` - Application logs 
+- `data/` - Market data and trading data
 
 #### Trading Configuration
 - `TRADING_ENABLED`: Enable actual trading (true/false)

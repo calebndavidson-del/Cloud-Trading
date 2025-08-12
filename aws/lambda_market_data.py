@@ -114,10 +114,11 @@ def store_market_data_s3(data: Dict[str, Any], config: Dict[str, Any]):
     try:
         s3 = boto3.client('s3', region_name=config['aws']['region'])
         bucket_name = config['aws']['s3']['data_bucket']
+        data_prefix = config['aws']['s3'].get('data_prefix', 'data/')
         
-        # Create S3 key with date partitioning
+        # Create S3 key with data prefix and date partitioning
         timestamp = datetime.utcnow()
-        s3_key = f"market_data/{timestamp.strftime('%Y/%m/%d')}/market_data_{timestamp.strftime('%Y%m%d_%H%M%S')}.json"
+        s3_key = f"{data_prefix}market_data/{timestamp.strftime('%Y/%m/%d')}/market_data_{timestamp.strftime('%Y%m%d_%H%M%S')}.json"
         
         # Upload to S3
         s3.put_object(

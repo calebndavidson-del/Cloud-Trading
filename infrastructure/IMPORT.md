@@ -153,9 +153,7 @@ The script matches discovered resources to Terraform resources using naming patt
 
 | AWS Resource Pattern | Terraform Resource | Description |
 |---------------------|-------------------|-------------|
-| `*lambda-deployment*` | `aws_s3_bucket.lambda_deployment` | Lambda deployment bucket |
-| `*logs*` | `aws_s3_bucket.trading_bot_logs` | Logs storage bucket |
-| `*data*` | `aws_s3_bucket.trading_bot_data` | Data storage bucket |
+| `*lambda-deployment*` or `*cloud-trading-bot-lambda-deployment-m6x4p8e*` | `aws_s3_bucket.lambda_deployment` | Single S3 bucket for all purposes (Lambda, logs, data) |
 | `*lambda-role*` | `aws_iam_role.lambda_role` | Lambda execution role |
 | `*ecs-task-role*` | `aws_iam_role.ecs_task_role` | ECS task role |
 | `*config*` | `aws_dynamodb_table.config` | Configuration table |
@@ -163,6 +161,8 @@ The script matches discovered resources to Terraform resources using naming patt
 | `*trades*` | `aws_dynamodb_table.trades` | Trades history table |
 | `*market-data-fetcher*` | `aws_lambda_function.market_data_fetcher` | Market data Lambda |
 | `*strategy*` | `aws_ecr_repository.trading_bot_strategy` | Strategy container repo |
+
+**Note**: The previous separate buckets for logs (`*logs*`) and data (`*data*`) have been consolidated into the single `lambda_deployment` bucket.
 
 ## 🔧 Extending for New Resource Types
 

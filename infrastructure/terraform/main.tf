@@ -57,16 +57,7 @@ resource "random_string" "suffix" {
   upper   = false
 }
 
-# S3 Buckets
-resource "aws_s3_bucket" "trading_bot_logs" {
-  bucket = "cloud-trading-bot-lambda-deployment-m6x4p8e"
-}
-
-resource "aws_s3_bucket" "trading_bot_data" {
-  bucket = "${var.project_name}-data-${random_string.suffix.result}"
-}
-
-# S3 bucket for Lambda deployment packages
+# S3 Bucket - Single bucket for all purposes (lambda deployment, logs, and data)
 resource "aws_s3_bucket" "lambda_deployment" {
   bucket = "cloud-trading-bot-lambda-deployment-m6x4p8e"
 }
@@ -81,29 +72,22 @@ resource "aws_s3_bucket_public_access_block" "lambda_deployment_pab" {
   restrict_public_buckets = true
 }
 
-resource "aws_s3_bucket_versioning" "trading_bot_logs_versioning" {
-  bucket = aws_s3_bucket.trading_bot_logs.id
+resource "aws_s3_bucket_versioning" "lambda_deployment_versioning" {
+  bucket = aws_s3_bucket.lambda_deployment.id
   versioning_configuration {
     status = "Enabled"
   }
 }
 
-resource "aws_s3_bucket_versioning" "trading_bot_data_versioning" {
-  bucket = aws_s3_bucket.trading_bot_data.id
-  versioning_configuration {
-    status = "Enabled"
-  }
-}
-
-resource "aws_s3_bucket_lifecycle_configuration" "trading_bot_logs_lifecycle" {
-  bucket = aws_s3_bucket.trading_bot_logs.id
+resource "aws_s3_bucket_lifecycle_configuration" "lambda_deployment_lifecycle" {
+  bucket = aws_s3_bucket.lambda_deployment.id
 
   rule {
     id     = "delete_old_logs"
     status = "Enabled"
 
     filter {
-      prefix = ""
+      prefix = "logs/"
     }
 
     expiration {
@@ -112,6 +96,23 @@ resource "aws_s3_bucket_lifecycle_configuration" "trading_bot_logs_lifecycle" {
 
     noncurrent_version_expiration {
       noncurrent_days = 7
+    }
+  }
+
+  rule {
+    id     = "delete_old_data"
+    status = "Enabled"
+
+    filter {
+      prefix = "data/"
+    }
+
+    expiration {
+      days = 90
+    }
+
+    noncurrent_version_expiration {
+      noncurrent_days = 30
     }
   }
 }
@@ -253,10 +254,6 @@ resource "aws_iam_role_policy" "lambda_policy" {
           "s3:ListBucket"
         ]
         Resource = [
-          aws_s3_bucket.trading_bot_logs.arn,
-          "${aws_s3_bucket.trading_bot_logs.arn}/*",
-          aws_s3_bucket.trading_bot_data.arn,
-          "${aws_s3_bucket.trading_bot_data.arn}/*",
           aws_s3_bucket.lambda_deployment.arn,
           "${aws_s3_bucket.lambda_deployment.arn}/*"
         ]
@@ -312,8 +309,8 @@ resource "aws_lambda_function" "market_data_fetcher" {
       DYNAMODB_CONFIG_TABLE = aws_dynamodb_table.config.name
       DYNAMODB_STATE_TABLE  = aws_dynamodb_table.state.name
       DYNAMODB_TRADES_TABLE = aws_dynamodb_table.trades.name
-      S3_BUCKET_LOGS        = aws_s3_bucket.trading_bot_logs.bucket
-      S3_BUCKET_DATA        = aws_s3_bucket.trading_bot_data.bucket
+      S3_BUCKET_LOGS        = aws_s3_bucket.lambda_deployment.bucket
+      S3_BUCKET_DATA        = aws_s3_bucket.lambda_deployment.bucket
       SECRETS_MANAGER_ARN   = aws_secretsmanager_secret.trading_bot_secrets.arn
       ENV                   = var.environment
       # Note: AWS_REGION is automatically provided by AWS Lambda runtime and cannot be set manually
@@ -358,11 +355,13 @@ output "lambda_s3_key" {
 }
 
 output "s3_logs_bucket" {
-  value = aws_s3_bucket.trading_bot_logs.bucket
+  value = aws_s3_bucket.lambda_deployment.bucket
+  description = "S3 bucket for logs (same as deployment bucket)"
 }
 
 output "s3_data_bucket" {
-  value = aws_s3_bucket.trading_bot_data.bucket
+  value = aws_s3_bucket.lambda_deployment.bucket
+  description = "S3 bucket for data (same as deployment bucket)"
 }
 
 output "dynamodb_config_table" {

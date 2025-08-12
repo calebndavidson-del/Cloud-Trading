@@ -135,10 +135,8 @@ resource "aws_iam_role_policy" "ecs_task_policy" {
           "s3:ListBucket"
         ]
         Resource = [
-          aws_s3_bucket.trading_bot_logs.arn,
-          "${aws_s3_bucket.trading_bot_logs.arn}/*",
-          aws_s3_bucket.trading_bot_data.arn,
-          "${aws_s3_bucket.trading_bot_data.arn}/*"
+          aws_s3_bucket.lambda_deployment.arn,
+          "${aws_s3_bucket.lambda_deployment.arn}/*"
         ]
       },
       {
@@ -234,11 +232,11 @@ resource "aws_ecs_task_definition" "trading_bot_strategy" {
         },
         {
           name  = "S3_BUCKET_LOGS"
-          value = aws_s3_bucket.trading_bot_logs.bucket
+          value = aws_s3_bucket.lambda_deployment.bucket
         },
         {
           name  = "S3_BUCKET_DATA"
-          value = aws_s3_bucket.trading_bot_data.bucket
+          value = aws_s3_bucket.lambda_deployment.bucket
         },
         {
           name  = "SECRETS_MANAGER_ARN"

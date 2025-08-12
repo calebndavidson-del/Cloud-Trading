@@ -2,6 +2,15 @@
 
 This guide provides comprehensive instructions for packaging and deploying AWS Lambda functions using S3-based deployment for the Cloud Trading Bot.
 
+## Single Bucket Architecture
+
+**Important**: This project uses a single S3 bucket (`cloud-trading-bot-lambda-deployment-m6x4p8e`) for all storage needs:
+- **Lambda deployment packages** (under `lambda/` prefix)
+- **Application logs** (under `logs/` prefix)
+- **Market data storage** (under `data/` prefix)
+
+This consolidation simplifies management, reduces costs, and ensures consistent permissions across all S3 operations.
+
 ## Overview
 
 S3-based Lambda deployment allows for larger package sizes (up to 250MB) compared to direct deployment (70MB limit). This is essential for Python applications with multiple dependencies like the Cloud Trading Bot.
@@ -76,18 +85,22 @@ The package creation process includes:
 
 ### 2. S3 Bucket Configuration
 
-The Terraform configuration creates a dedicated S3 bucket:
+**Important: This project uses a single, dedicated S3 bucket for all purposes:**
 
 ```hcl
 resource "aws_s3_bucket" "lambda_deployment" {
-  bucket = "${var.project_name}-lambda-deployment-${random_string.suffix.result}"
+  bucket = "cloud-trading-bot-lambda-deployment-m6x4p8e"
 }
 ```
 
-**Bucket Features:**
-- Public access blocked for security
-- Versioning enabled for rollback capability
-- Unique naming with random suffix to avoid conflicts
+**Single Bucket Architecture:**
+- **Bucket Name**: `cloud-trading-bot-lambda-deployment-m6x4p8e` (fixed, no random suffix)
+- **Lambda Packages**: Stored under `lambda/` prefix
+- **Application Logs**: Stored under `logs/` prefix  
+- **Market Data**: Stored under `data/` prefix
+- **Public access blocked** for security
+- **Versioning enabled** for rollback capability
+- **Lifecycle policies** configured for automatic cleanup
 
 ### 3. Lambda Function Configuration
 

@@ -107,9 +107,8 @@ Find the exact bucket name and import:
 # List your S3 buckets to find the exact names
 aws s3 ls | grep cloud-trading-bot
 
-# Import the buckets (replace with actual names)
-terraform import aws_s3_bucket.trading_bot_logs cloud-trading-bot-logs-abc12345
-terraform import aws_s3_bucket.trading_bot_data cloud-trading-bot-data-abc12345
+# Import the bucket (replace with actual name)
+terraform import aws_s3_bucket.lambda_deployment cloud-trading-bot-lambda-deployment-m6x4p8e
 ```
 
 ### CloudWatch Log Groups Already Exist
@@ -245,7 +244,7 @@ For large infrastructures, deploy in stages:
 
 3. **Storage Resources:**
    ```bash
-   terraform apply -target=aws_s3_bucket.trading_bot_logs
+   terraform apply -target=aws_s3_bucket.lambda_deployment
    terraform apply -target=aws_dynamodb_table.config
    ```
 

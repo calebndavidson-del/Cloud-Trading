@@ -21,9 +21,14 @@ DYNAMODB_CONFIG_TABLE = os.getenv("DYNAMODB_CONFIG_TABLE", "trading-bot-config")
 DYNAMODB_STATE_TABLE = os.getenv("DYNAMODB_STATE_TABLE", "trading-bot-state")
 DYNAMODB_TRADES_TABLE = os.getenv("DYNAMODB_TRADES_TABLE", "trading-bot-trades")
 
-# S3 Configuration
-S3_BUCKET_LOGS = os.getenv("S3_BUCKET_LOGS", "trading-bot-logs")
-S3_BUCKET_DATA = os.getenv("S3_BUCKET_DATA", "trading-bot-data")
+# S3 Configuration - Using single bucket with prefixes for organization
+S3_BUCKET_LOGS = os.getenv("S3_BUCKET_LOGS", "cloud-trading-bot-lambda-deployment-m6x4p8e")
+S3_BUCKET_DATA = os.getenv("S3_BUCKET_DATA", "cloud-trading-bot-lambda-deployment-m6x4p8e")
+
+# S3 Key Prefixes for organization within the single bucket
+S3_PREFIX_LOGS = "logs/"
+S3_PREFIX_DATA = "data/"
+S3_PREFIX_LAMBDA = "lambda/"
 
 # Secrets Manager
 SECRETS_MANAGER_ARN = os.getenv("SECRETS_MANAGER_ARN", "")
@@ -65,7 +70,10 @@ def get_config() -> Dict[str, Any]:
             },
             "s3": {
                 "logs_bucket": S3_BUCKET_LOGS,
-                "data_bucket": S3_BUCKET_DATA
+                "data_bucket": S3_BUCKET_DATA,
+                "logs_prefix": S3_PREFIX_LOGS,
+                "data_prefix": S3_PREFIX_DATA,
+                "lambda_prefix": S3_PREFIX_LAMBDA
             },
             "secrets_manager_arn": SECRETS_MANAGER_ARN,
             "lambda": {
