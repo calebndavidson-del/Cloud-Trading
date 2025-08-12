@@ -4,7 +4,7 @@ Test stubs for AWS-specific logic with mocked boto3 calls.
 import pytest
 import json
 import boto3
-from moto import mock_dynamodb, mock_s3, mock_secretsmanager, mock_lambda, mock_ecs
+from moto import mock_aws
 from unittest.mock import Mock, patch
 from aws.services import AWSServicesManager
 
@@ -12,7 +12,7 @@ from aws.services import AWSServicesManager
 class TestAWSServicesManager:
     """Test cases for AWS services integration."""
     
-    @mock_secretsmanager
+    @mock_aws
     def test_get_secret(self):
         """Test retrieving secrets from AWS Secrets Manager."""
         # Create mock secrets manager
@@ -39,7 +39,7 @@ class TestAWSServicesManager:
         assert 'yahoo_api_key' in result
         assert result['yahoo_api_key'] == 'test_yahoo_key'
     
-    @mock_dynamodb
+    @mock_aws
     def test_store_config(self):
         """Test storing configuration in DynamoDB."""
         # Create mock DynamoDB table
@@ -74,7 +74,7 @@ class TestAWSServicesManager:
         stored_config = json.loads(response['Item']['config'])
         assert stored_config == test_config
     
-    @mock_s3
+    @mock_aws
     def test_upload_logs(self):
         """Test uploading logs to S3."""
         # Create mock S3 bucket
@@ -99,7 +99,7 @@ class TestAWSServicesManager:
         content = response['Body'].read().decode('utf-8')
         assert content == log_data
     
-    @mock_lambda
+    @mock_aws
     def test_invoke_lambda(self):
         """Test invoking Lambda function."""
         # Create mock Lambda function
@@ -126,7 +126,7 @@ class TestAWSServicesManager:
         assert 'StatusCode' in result
         assert result['StatusCode'] == 202
     
-    @mock_ecs
+    @mock_aws
     def test_update_ecs_service(self):
         """Test updating ECS service."""
         # Create mock ECS cluster and service
@@ -336,9 +336,7 @@ class TestAPIServer:
 class TestIntegration:
     """Integration tests for AWS components."""
     
-    @mock_dynamodb
-    @mock_s3
-    @mock_secretsmanager
+    @mock_aws
     def test_full_workflow(self):
         """Test complete workflow with AWS services."""
         # Set up AWS resources
