@@ -107,6 +107,7 @@ class StrategyManager:
         """
         pass
     
+    @abstractmethod
     def allocate_capital(
         self, 
         total_capital: float,
