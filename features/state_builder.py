@@ -51,7 +51,21 @@ class StateBuilder:
     
     def setup_normalizers(self) -> None:
         """Initialize feature normalization parameters."""
-        pass
+        normalization_cfg = self.config.get("normalization", {})
+        state_features = self.config.get("state_features", [])
+        if not state_features:
+            self.logger.warning("No state_features specified in config; feature_normalizers will be empty.")
+        for feature in state_features:
+            params = normalization_cfg.get(feature)
+            if params is not None and "mean" in params and "std" in params:
+                self.feature_normalizers[feature] = {
+                    "mean": params["mean"],
+                    "std": params["std"] if params["std"] != 0 else 1.0
+                }
+            else:
+                # Default to mean=0, std=1 if not provided
+                self.logger.warning(f"Normalization parameters for feature '{feature}' not found; using default mean=0, std=1.")
+                self.feature_normalizers[feature] = {"mean": 0.0, "std": 1.0}
     
     def build_market_state(
         self, 
