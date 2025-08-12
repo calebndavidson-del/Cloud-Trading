@@ -116,6 +116,14 @@ validate_directory() {
         exit 1
     fi
     
+    # Check if this main.tf contains the S3 bucket resource we need to import
+    if ! grep -q "resource.*aws_s3_bucket.*lambda_deployment" main.tf; then
+        log "ERROR" "This main.tf does not contain the required S3 bucket resource 'aws_s3_bucket.lambda_deployment'"
+        log "INFO" "Please run this script from the infrastructure/terraform directory"
+        log "INFO" "Current directory: $(pwd)"
+        exit 1
+    fi
+    
     log "SUCCESS" "Running from correct directory: $(pwd)"
 }
 
