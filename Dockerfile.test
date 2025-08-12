@@ -1,7 +1,0 @@
-FROM python:3.11-slim
-WORKDIR /app
-COPY requirements_Version9.txt .
-RUN pip install -r requirements_Version9.txt
-COPY . .
-EXPOSE 8080
-CMD echo 'Dockerfile syntax test passed'
