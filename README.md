@@ -54,7 +54,7 @@ The deployment script will:
 - Build and push Docker image to ECR
 - Set up all AWS services
 
-#### S3-Based Lambda Deployment
+#### Detailed Lambda Deployment Process
 
 The system uses S3-based deployment for Lambda functions, which provides several advantages:
 - **Large Package Support**: Supports packages up to 250MB (vs 70MB limit for direct uploads)
@@ -62,11 +62,71 @@ The system uses S3-based deployment for Lambda functions, which provides several
 - **Version Management**: Better tracking of Lambda package versions
 - **CI/CD Integration**: Easier integration with automated deployment pipelines
 
-The Lambda deployment process:
-1. Creates deployment package with all dependencies
-2. Uploads package to dedicated S3 bucket (`{project-name}-lambda-deployment-{suffix}`)
-3. References S3 object in Lambda function configuration
-4. Automatically updates function when package changes
+**Step-by-step Lambda deployment process:**
+
+1. **Package Creation**: The deployment script creates a ZIP package containing:
+   - All Python source files from `backend/` and `aws/` directories
+   - All required dependencies from `requirements_Version9.txt`
+   - Optimized for size (removes test files, documentation, etc.)
+
+2. **Infrastructure Deployment**: Terraform creates:
+   - S3 bucket for Lambda packages (`{project-name}-lambda-deployment-{suffix}`)
+   - Lambda function configured to use S3-based deployment
+   - IAM roles and permissions for S3 access
+
+3. **Package Upload**: The package is uploaded to the dedicated S3 bucket with:
+   - Automatic size validation (max 250MB)
+   - Upload verification and integrity checking
+   - Metadata tagging for deployment tracking
+
+4. **Function Update**: Lambda function is updated to reference the S3 object:
+   ```
+   S3 Bucket: {project-name}-lambda-deployment-{random-suffix}
+   S3 Key: lambda/lambda_deployment.zip
+   ```
+
+**Manual Lambda Package Creation (Advanced):**
+
+For custom packages or testing:
+
+```bash
+# Create a custom Lambda package
+./scripts/package_lambda.sh my_custom_lambda.zip
+
+# Upload to S3 (get bucket name from Terraform outputs)
+./scripts/upload_lambda_to_s3.sh my_custom_lambda.zip <lambda-bucket-name> lambda/lambda_deployment.zip
+
+# Update Lambda function via Terraform
+cd infrastructure/terraform
+terraform apply -auto-approve
+```
+
+**Matching S3 Paths with Terraform Configuration:**
+
+The Terraform configuration uses these key components:
+
+```hcl
+# Terraform variables (infrastructure/terraform/main.tf)
+variable "lambda_s3_key" {
+  default = "lambda/lambda_deployment.zip"  # This must match upload path
+}
+
+# Lambda function configuration
+resource "aws_lambda_function" "market_data_fetcher" {
+  s3_bucket = aws_s3_bucket.lambda_deployment.bucket  # Auto-created bucket
+  s3_key    = var.lambda_s3_key                       # Matches upload path
+}
+
+# Outputs for deployment scripts
+output "lambda_deployment_bucket" {
+  value = aws_s3_bucket.lambda_deployment.bucket
+}
+output "lambda_s3_key" {
+  value = var.lambda_s3_key
+}
+```
+
+To change the S3 path, update the `lambda_s3_key` variable and ensure your upload script uses the same path.
 
 ### 2. Configure API Keys
 
@@ -439,6 +499,50 @@ Structured logging with:
 ## 🔧 Troubleshooting
 
 ### Common Issues
+
+#### Lambda Deployment Issues
+
+**Package Too Large Error:**
+```bash
+# Check package size
+ls -lh lambda_deployment.zip
+
+# If > 250MB, optimize the package
+./scripts/package_lambda.sh optimized_lambda.zip
+
+# Or remove unnecessary dependencies from requirements_Version9.txt
+```
+
+**S3 Upload Failures:**
+```bash
+# Check if S3 bucket exists
+aws s3 ls s3://your-lambda-deployment-bucket/
+
+# Verify AWS credentials and region
+aws sts get-caller-identity
+aws configure get region
+
+# Check IAM permissions for S3 access
+aws iam get-user-policy --user-name your-user --policy-name your-policy
+```
+
+**Lambda Function Update Failures:**
+```bash
+# Check if S3 object exists
+aws s3 ls s3://your-lambda-deployment-bucket/lambda/lambda_deployment.zip
+
+# Verify Lambda function configuration
+aws lambda get-function --function-name your-lambda-function-name
+
+# Check Terraform state
+cd infrastructure/terraform
+terraform plan
+```
+
+**S3 Path Mismatch:**
+Ensure the S3 path in your upload matches the Terraform configuration:
+- Terraform variable: `lambda_s3_key = "lambda/lambda_deployment.zip"`
+- Upload command: `./scripts/upload_lambda_to_s3.sh package.zip bucket-name lambda/lambda_deployment.zip`
 
 #### Lambda Function Errors
 ```bash

@@ -82,13 +82,19 @@ cp -r backend /tmp/lambda_package/
 cp -r aws /tmp/lambda_package/
 
 # Copy requirements for Lambda
-cat > /tmp/lambda_package/requirements.txt << EOF
+if [ -f "requirements_Version9.txt" ]; then
+    echo "📋 Using existing requirements file: requirements_Version9.txt"
+    cp requirements_Version9.txt /tmp/lambda_package/requirements.txt
+else
+    echo "⚠️  requirements_Version9.txt not found, using basic requirements"
+    cat > /tmp/lambda_package/requirements.txt << EOF
 yfinance
 requests
 boto3
 numpy
 pandas
 EOF
+fi
 
 # Install dependencies
 cd /tmp/lambda_package
