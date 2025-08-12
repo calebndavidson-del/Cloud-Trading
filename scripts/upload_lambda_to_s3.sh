@@ -68,7 +68,12 @@ fi
 # Check if S3 bucket exists
 echo "🔍 Checking if S3 bucket exists..."
 if ! aws s3api head-bucket --bucket "$S3_BUCKET" --region "$AWS_REGION" 2>/dev/null; then
-    error_exit "S3 bucket '$S3_BUCKET' does not exist or is not accessible in region '$AWS_REGION'"
+    echo "⚠️  S3 bucket '$S3_BUCKET' does not exist or is not accessible in region '$AWS_REGION'"
+    echo "   Make sure you have:"
+    echo "   1. Deployed the Terraform infrastructure first (./scripts/deploy.sh)"
+    echo "   2. Correct AWS credentials and region"
+    echo "   3. Proper IAM permissions for S3 access"
+    exit 1
 fi
 
 # Upload the Lambda package to S3
