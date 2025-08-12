@@ -2,6 +2,87 @@
 
 This guide explains how to use the robust Terraform import process to seamlessly import existing AWS resources into Terraform state, preventing errors like "BucketAlreadyOwnedByYou" and "ResourceAlreadyExists".
 
+## 🔐 Prerequisites: Verify AWS Credentials and Permissions
+
+**IMPORTANT:** Before running any import commands, verify your AWS credentials have the required permissions to avoid "AccessDenied" errors.
+
+### 1. Check Your AWS Identity
+
+Ensure you're using the correct AWS credentials:
+
+```bash
+# Verify your current AWS identity and account
+aws sts get-caller-identity
+```
+
+Expected output should show your user/role ARN and the correct AWS account ID.
+
+### 2. Verify Required Permissions for Import Operations
+
+Test critical permissions needed for the import process:
+
+```bash
+# Test S3 discovery permissions (essential for S3 bucket imports)
+aws s3api list-buckets --query "Buckets[?starts_with(Name, 'cloud-trading-bot')].Name" --output table
+
+# Test IAM discovery permissions
+aws iam list-roles --query "Roles[?starts_with(RoleName, 'cloud-trading-bot')].RoleName" --output table
+
+# Test DynamoDB discovery permissions  
+aws dynamodb list-tables --query "TableNames[?starts_with(@, 'cloud-trading-bot')]" --output table
+
+# Test ECR discovery permissions
+aws ecr describe-repositories --query "repositories[?starts_with(repositoryName, 'cloud-trading-bot')].repositoryName" --output table 2>/dev/null || echo "No ECR repositories found or insufficient permissions"
+
+# Test Lambda discovery permissions
+aws lambda list-functions --query "Functions[?starts_with(FunctionName, 'cloud-trading-bot')].FunctionName" --output table 2>/dev/null || echo "No Lambda functions found or insufficient permissions"
+```
+
+### 3. Essential S3 Permissions Check
+
+Since S3 bucket imports are common, specifically test S3 permissions:
+
+```bash
+# Test S3 bucket-specific permissions that are required for imports
+aws s3api get-bucket-location --bucket $(aws s3api list-buckets --query "Buckets[?starts_with(Name, 'cloud-trading-bot')].Name" --output text | head -1) 2>/dev/null || echo "No accessible S3 buckets found - check permissions"
+
+# Test S3 bucket configuration access
+aws s3api get-bucket-versioning --bucket $(aws s3api list-buckets --query "Buckets[?starts_with(Name, 'cloud-trading-bot')].Name" --output text | head -1) 2>/dev/null || echo "Cannot access bucket configuration - check permissions"
+```
+
+### 4. Verify IAM Policy Attachment
+
+Ensure the required IAM policy is attached to your user or role:
+
+```bash
+# Check attached policies for your user (replace 'your-username' with actual username)
+aws iam list-attached-user-policies --user-name $(aws sts get-caller-identity --query "Arn" --output text | cut -d'/' -f2) 2>/dev/null || echo "Using role-based access or unable to determine user policies"
+
+# Alternative: Check if you can perform a policy simulation (indicates proper IAM access)
+aws iam simulate-principal-policy \
+  --policy-source-arn $(aws sts get-caller-identity --query "Arn" --output text) \
+  --action-names "s3:ListAllMyBuckets" \
+  --resource-arns "arn:aws:s3:::*" \
+  --query "EvaluationResults[0].EvalDecision" --output text 2>/dev/null || echo "Unable to simulate policies - check IAM permissions"
+```
+
+### 🚨 Permission Troubleshooting
+
+If any of the above commands fail with "AccessDenied":
+
+1. **Review the minimal IAM policy:** Check [terraform-iam-policy-minimal.json](./terraform-iam-policy-minimal.json) and ensure it's attached to your user/role
+2. **Verify policy attachment:**
+   ```bash
+   # List all policies attached to your user
+   aws iam list-attached-user-policies --user-name your-username
+   ```
+3. **Check the policy content:**
+   ```bash
+   # Get the policy version and content
+   aws iam get-policy --policy-arn arn:aws:iam::YOUR-ACCOUNT-ID:policy/CloudTradingBotTerraformPolicyMinimal
+   ```
+4. **See detailed troubleshooting:** Refer to the [README.md](./README.md#-troubleshooting-permission-errors) for comprehensive permission debugging steps
+
 ## 🎯 Overview
 
 The enhanced import script (`import-existing-resources.sh`) automatically discovers and imports existing AWS resources that match your project configuration. This prevents Terraform from attempting to create resources that already exist in your AWS account.
@@ -233,6 +314,9 @@ fi
     "Effect": "Allow",
     "Action": [
         "s3:ListAllMyBuckets",
+        "s3:GetBucketLocation",
+        "s3:GetBucketVersioning",
+        "s3:GetAccelerateConfiguration",
         "iam:ListRoles",
         "iam:GetRole",
         "iam:GetRolePolicy",
@@ -250,6 +334,24 @@ fi
     "Resource": "*"
 }
 ```
+
+**Verification steps:**
+1. Check if the minimal policy is attached:
+   ```bash
+   aws iam list-attached-user-policies --user-name your-username
+   ```
+2. Test specific permission:
+   ```bash
+   aws s3api list-buckets  # Test S3 access
+   aws iam list-roles      # Test IAM access
+   ```
+3. Use policy simulator:
+   ```bash
+   aws iam simulate-principal-policy \
+     --policy-source-arn $(aws sts get-caller-identity --query "Arn" --output text) \
+     --action-names "s3:ListAllMyBuckets" \
+     --resource-arns "arn:aws:s3:::*"
+   ```
 
 #### 2. Resource Not Found
 
