@@ -138,6 +138,12 @@ class TradingBotApplication:
     
     def _update_config_for_mode(self, config: Dict[str, Any]) -> None:
         """Update configuration based on execution mode."""
+        # Ensure required nested dictionaries exist before assignment
+        config.setdefault('trading', {})
+        config.setdefault('execution', {})
+        config['execution'].setdefault('order_execution', {})
+        config.setdefault('learning', {})
+        config['learning'].setdefault('model_training', {})
         if self.mode == 'backtest':
             config['trading']['paper_trading'] = True
             config['trading']['learning_mode'] = False
