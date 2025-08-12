@@ -50,7 +50,7 @@ cd Cloud-Trading
 ```
 
 The script provides these options:
-- **Full Automated Deployment** - Complete setup with guided prompts
+- **Full Automated Deployment** - Complete setup with guided prompts (includes automatic import)
 - **Lambda Package Only** - Create deployment package for testing
 - **Infrastructure Only** - Deploy AWS resources without Lambda code
 - **View Documentation** - Access built-in help and guides
@@ -59,6 +59,57 @@ The script provides these options:
 ### Advanced Deployment
 
 For experienced users or automation scenarios:
+
+#### Recommended Workflow (Prevents Resource Conflicts)
+
+```bash
+# Clone the repository
+git clone <repository-url>
+cd Cloud-Trading
+
+# 1. First-time setup with automatic resource import
+./scripts/deploy.sh
+```
+
+**The deployment script now automatically handles resource imports** to prevent common errors like "BucketAlreadyOwnedByYou".
+
+#### Manual Import Process (For Granular Control)
+
+If you need more control over the import process:
+
+```bash
+cd Cloud-Trading/infrastructure/terraform
+
+# 1. Validate import setup
+./validate-import.sh
+
+# 2. Preview what would be imported (safe)
+./import-existing-resources.sh --dry-run
+
+# 3. Import existing resources to prevent conflicts
+./import-existing-resources.sh
+
+# 4. Deploy infrastructure
+cd ../..
+./scripts/deploy.sh
+```
+
+**Import Script Capabilities:**
+- 🔍 **Smart Discovery**: Automatically finds existing AWS resources
+- 🛡️ **Safe Operations**: Dry-run mode for safe testing
+- 📊 **Extensible**: Easy to add new resource types (VPCs, IAM roles, etc.)
+- 🎯 **Selective**: Import only specific resource types when needed
+- 📝 **Detailed Logging**: Comprehensive operation logs
+
+**Supported Resource Types:**
+- S3 buckets (deployment, logs, data)
+- IAM roles and policies
+- DynamoDB tables
+- ECR repositories
+- Lambda functions
+- CloudWatch log groups
+- Secrets Manager secrets
+- ECS clusters
 
 ### 1. Deploy AWS Infrastructure
 
