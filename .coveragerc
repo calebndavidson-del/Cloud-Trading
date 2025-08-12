@@ -1,0 +1,39 @@
+[run]
+source = .
+omit = 
+    */tests/*
+    */venv/*
+    */env/*
+    */__pycache__/*
+    */site-packages/*
+    .tox/*
+    */migrations/*
+    manage.py
+    setup.py
+    */scripts/*
+    */infrastructure/*
+    */examples/*
+    */aws/*
+    htmlcov/*
+    .coverage
+    coverage.xml
+    *_Version2.py
+    market_data_examples.py
+    test_structure.py
+    test_workflow.py
+
+[report]
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    if self.debug:
+    if settings.DEBUG
+    raise AssertionError
+    raise NotImplementedError
+    if 0:
+    if __name__ == .__main__.:
+    class .*\bProtocol\):
+    @(abc\.)?abstractmethod
+
+[html]
+directory = htmlcov
