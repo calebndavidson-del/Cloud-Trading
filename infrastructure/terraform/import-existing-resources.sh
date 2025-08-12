@@ -3,6 +3,28 @@
 # Enhanced script to import existing AWS resources into Terraform state
 # This helps resolve "resource already exists" errors by dynamically discovering
 # and importing existing resources before Terraform tries to create them.
+#
+# CREDENTIAL VALIDATION:
+# - Performs explicit AWS credential validation at startup using 'aws sts get-caller-identity'
+# - Fails fast with clear error messages if credentials are invalid or missing
+# - Displays account and user information for verification
+# - Prevents silent failures during resource discovery and import operations
+#
+# ERROR REPORTING:
+# - Captures and displays detailed error messages from AWS API calls
+# - Provides troubleshooting tips for common import failures
+# - Enhanced verbose mode shows additional diagnostic information
+# - Logs all operations to a file for debugging purposes
+#
+# USAGE:
+# This script should be run from the infrastructure/terraform directory before
+# running 'terraform apply' to avoid resource conflicts.
+#
+# Prerequisites:
+# - AWS CLI installed and configured with valid credentials
+# - Terraform installed and initialized
+# - jq installed for JSON parsing (recommended but not required)
+# - Appropriate IAM permissions to read AWS resources
 
 set -e
 
@@ -43,35 +65,85 @@ resource_in_state() {
     terraform state show "$1" >/dev/null 2>&1
 }
 
-# Function to check if AWS resource exists
+# Function to check if AWS resource exists with enhanced error reporting
 aws_resource_exists() {
     local resource_type="$1"
     local resource_id="$2"
+    local check_output
+    local check_exit_code
     
     case "$resource_type" in
         "s3_bucket")
-            aws s3api head-bucket --bucket "$resource_id" >/dev/null 2>&1
+            check_output=$(aws s3api head-bucket --bucket "$resource_id" 2>&1)
+            check_exit_code=$?
+            if [ $check_exit_code -ne 0 ] && [ "$VERBOSE" = "true" ]; then
+                log "INFO" "S3 bucket '$resource_id' check failed: $check_output"
+            fi
+            return $check_exit_code
             ;;
         "iam_role")
-            aws iam get-role --role-name "$resource_id" >/dev/null 2>&1
+            check_output=$(aws iam get-role --role-name "$resource_id" 2>&1)
+            check_exit_code=$?
+            if [ $check_exit_code -ne 0 ] && [ "$VERBOSE" = "true" ]; then
+                log "INFO" "IAM role '$resource_id' check failed: $check_output"
+            fi
+            return $check_exit_code
             ;;
         "dynamodb_table")
-            aws dynamodb describe-table --table-name "$resource_id" >/dev/null 2>&1
+            check_output=$(aws dynamodb describe-table --table-name "$resource_id" 2>&1)
+            check_exit_code=$?
+            if [ $check_exit_code -ne 0 ] && [ "$VERBOSE" = "true" ]; then
+                log "INFO" "DynamoDB table '$resource_id' check failed: $check_output"
+            fi
+            return $check_exit_code
             ;;
         "ecr_repository")
-            aws ecr describe-repositories --repository-names "$resource_id" >/dev/null 2>&1
+            check_output=$(aws ecr describe-repositories --repository-names "$resource_id" 2>&1)
+            check_exit_code=$?
+            if [ $check_exit_code -ne 0 ] && [ "$VERBOSE" = "true" ]; then
+                log "INFO" "ECR repository '$resource_id' check failed: $check_output"
+            fi
+            return $check_exit_code
             ;;
         "cloudwatch_log_group")
-            aws logs describe-log-groups --log-group-name-prefix "$resource_id" | jq -r '.logGroups[].logGroupName' | grep -q "^$resource_id$"
+            check_output=$(aws logs describe-log-groups --log-group-name-prefix "$resource_id" 2>&1)
+            if [ $? -eq 0 ]; then
+                echo "$check_output" | jq -r '.logGroups[].logGroupName' | grep -q "^$resource_id$"
+                return $?
+            else
+                if [ "$VERBOSE" = "true" ]; then
+                    log "INFO" "CloudWatch log group '$resource_id' check failed: $check_output"
+                fi
+                return 1
+            fi
             ;;
         "secrets_manager_secret")
-            aws secretsmanager describe-secret --secret-id "$resource_id" >/dev/null 2>&1
+            check_output=$(aws secretsmanager describe-secret --secret-id "$resource_id" 2>&1)
+            check_exit_code=$?
+            if [ $check_exit_code -ne 0 ] && [ "$VERBOSE" = "true" ]; then
+                log "INFO" "Secrets Manager secret '$resource_id' check failed: $check_output"
+            fi
+            return $check_exit_code
             ;;
         "lambda_function")
-            aws lambda get-function --function-name "$resource_id" >/dev/null 2>&1
+            check_output=$(aws lambda get-function --function-name "$resource_id" 2>&1)
+            check_exit_code=$?
+            if [ $check_exit_code -ne 0 ] && [ "$VERBOSE" = "true" ]; then
+                log "INFO" "Lambda function '$resource_id' check failed: $check_output"
+            fi
+            return $check_exit_code
             ;;
         "ecs_cluster")
-            aws ecs describe-clusters --clusters "$resource_id" | jq -r '.clusters[].status' | grep -q "ACTIVE"
+            check_output=$(aws ecs describe-clusters --clusters "$resource_id" 2>&1)
+            if [ $? -eq 0 ]; then
+                echo "$check_output" | jq -r '.clusters[].status' | grep -q "ACTIVE"
+                return $?
+            else
+                if [ "$VERBOSE" = "true" ]; then
+                    log "INFO" "ECS cluster '$resource_id' check failed: $check_output"
+                fi
+                return 1
+            fi
             ;;
         *)
             log "WARN" "Unknown resource type: $resource_type"
@@ -80,7 +152,7 @@ aws_resource_exists() {
     esac
 }
 
-# Enhanced import function with AWS resource existence check
+# Enhanced import function with AWS resource existence check and detailed error reporting
 import_if_missing() {
     local terraform_resource="$1"
     local aws_resource_id="$2"
@@ -104,11 +176,27 @@ import_if_missing() {
         return 0
     fi
     
-    if terraform import "$terraform_resource" "$aws_resource_id" 2>/dev/null; then
+    # Capture both stdout and stderr for better error diagnostics
+    local import_output
+    local import_exit_code
+    import_output=$(terraform import "$terraform_resource" "$aws_resource_id" 2>&1)
+    import_exit_code=$?
+    
+    if [ $import_exit_code -eq 0 ]; then
         log "SUCCESS" "Successfully imported $resource_description"
         return 0
     else
         log "ERROR" "Failed to import $resource_description"
+        log "ERROR" "Terraform resource: $terraform_resource"
+        log "ERROR" "AWS resource ID: $aws_resource_id"
+        log "ERROR" "Terraform error output: $import_output"
+        echo ""
+        log "INFO" "💡 Import troubleshooting tips:"
+        log "INFO" "1. Verify the resource exists in AWS console"
+        log "INFO" "2. Check if the resource ID format is correct"
+        log "INFO" "3. Ensure your AWS credentials have read access to this resource"
+        log "INFO" "4. Check if the Terraform resource configuration matches the AWS resource"
+        echo ""
         return 1
     fi
 }
@@ -283,9 +371,26 @@ main() {
         log "WARN" "jq is not installed. Some features may not work properly."
     fi
 
-    # Verify AWS credentials
-    if ! aws sts get-caller-identity >/dev/null 2>&1; then
-        log "ERROR" "AWS credentials not configured or invalid"
+    # Verify AWS credentials - fail fast if invalid to prevent silent failures
+    log "INFO" "Validating AWS credentials..."
+    local aws_identity_output
+    if aws_identity_output=$(aws sts get-caller-identity 2>&1); then
+        local account_id=$(echo "$aws_identity_output" | jq -r '.Account' 2>/dev/null || echo "unknown")
+        local user_arn=$(echo "$aws_identity_output" | jq -r '.Arn' 2>/dev/null || echo "unknown")
+        log "SUCCESS" "AWS credentials validated successfully"
+        log "INFO" "Account ID: $account_id"
+        log "INFO" "User/Role ARN: $user_arn"
+        log "INFO" "Region: $AWS_REGION"
+    else
+        log "ERROR" "AWS credential validation failed"
+        log "ERROR" "This script requires valid AWS credentials to discover and import resources"
+        log "ERROR" "AWS CLI error output: $aws_identity_output"
+        echo ""
+        log "INFO" "💡 To fix this issue:"
+        log "INFO" "1. Configure AWS credentials using 'aws configure'"
+        log "INFO" "2. Set AWS_PROFILE environment variable if using profiles"
+        log "INFO" "3. Ensure your credentials have sufficient permissions"
+        log "INFO" "4. Check if MFA token is required and still valid"
         exit 1
     fi
 
@@ -586,8 +691,12 @@ import_iam_role_policy() {
     fi
     
     # Check if the policy is attached to the role
-    if ! aws iam get-role-policy --role-name "$role_name" --policy-name "$policy_name" >/dev/null 2>&1; then
+    local policy_check_output
+    if ! policy_check_output=$(aws iam get-role-policy --role-name "$role_name" --policy-name "$policy_name" 2>&1); then
         log "INFO" "IAM role policy $policy_name not found on role $role_name, skipping import"
+        if [ "$VERBOSE" = "true" ]; then
+            log "INFO" "Policy check failed: $policy_check_output"
+        fi
         return 0
     fi
     
@@ -599,11 +708,26 @@ import_iam_role_policy() {
         return 0
     fi
     
-    if terraform import "$terraform_resource" "$compound_id" 2>/dev/null; then
+    # Capture both stdout and stderr for better error diagnostics
+    local import_output
+    local import_exit_code
+    import_output=$(terraform import "$terraform_resource" "$compound_id" 2>&1)
+    import_exit_code=$?
+    
+    if [ $import_exit_code -eq 0 ]; then
         log "SUCCESS" "Successfully imported $resource_description"
         return 0
     else
         log "ERROR" "Failed to import $resource_description"
+        log "ERROR" "Terraform resource: $terraform_resource"
+        log "ERROR" "AWS resource ID: $compound_id"
+        log "ERROR" "Terraform error output: $import_output"
+        echo ""
+        log "INFO" "💡 IAM policy import troubleshooting tips:"
+        log "INFO" "1. Verify the policy exists and is attached to the role"
+        log "INFO" "2. Check the policy name format (case-sensitive)"
+        log "INFO" "3. Ensure your AWS credentials have IAM read permissions"
+        echo ""
         return 1
     fi
 }
