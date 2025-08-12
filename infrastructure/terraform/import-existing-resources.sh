@@ -363,14 +363,8 @@ import_s3_resources() {
         # Try to import known bucket patterns
         for bucket in $buckets; do
             case "$bucket" in
-                *"lambda-deployment"*)
-                    import_if_missing "aws_s3_bucket.lambda_deployment" "$bucket" "Lambda Deployment S3 Bucket" "s3_bucket"
-                    ;;
-                *"logs"*)
-                    import_if_missing "aws_s3_bucket.trading_bot_logs" "$bucket" "Trading Bot Logs S3 Bucket" "s3_bucket"
-                    ;;
-                *"data"*)
-                    import_if_missing "aws_s3_bucket.trading_bot_data" "$bucket" "Trading Bot Data S3 Bucket" "s3_bucket"
+                *"lambda-deployment"* | *"cloud-trading-bot-lambda-deployment-m6x4p8e"*)
+                    import_if_missing "aws_s3_bucket.lambda_deployment" "$bucket" "Lambda Deployment S3 Bucket (single bucket for all purposes)" "s3_bucket"
                     ;;
                 *)
                     log "INFO" "Found unmatched S3 bucket: $bucket (manual import may be needed)"
