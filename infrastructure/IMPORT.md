@@ -389,7 +389,8 @@ This is normal and expected. The script skips resources that are already managed
    ```
 
 2. Check Terraform resource configuration matches AWS resource
-3. Try manual import:
+3. For detailed manual import troubleshooting, see the [Manual Terraform Import for Troubleshooting](./TROUBLESHOOTING.md#-manual-terraform-import-for-troubleshooting) section in TROUBLESHOOTING.md
+4. Try manual import:
    ```bash
    terraform import aws_s3_bucket.bucket_name actual-bucket-name
    ```
