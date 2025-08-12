@@ -53,6 +53,19 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements_Version9.txt
         
+    - name: Import existing resources
+      env:
+        AWS_REGION: ${{ github.event.inputs.aws_region || 'us-west-2' }}
+        PROJECT_NAME: cloud-trading-bot
+      run: |
+        cd infrastructure/terraform
+        chmod +x import-existing-resources.sh
+        chmod +x validate-import.sh
+        # First validate the import setup
+        ./validate-import.sh --prerequisites
+        # Then run import to prevent resource conflicts
+        ./import-existing-resources.sh --verbose
+        
     - name: Deploy infrastructure
       env:
         AWS_REGION: ${{ github.event.inputs.aws_region || 'us-west-2' }}

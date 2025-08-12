@@ -123,7 +123,22 @@ cd infrastructure/terraform
 echo "Initializing Terraform..."
 terraform init
 
+# Import existing resources to prevent conflicts
+echo ""
+echo "🔄 Importing existing resources to prevent conflicts..."
+if [ -f "./import-existing-resources.sh" ]; then
+    chmod +x "./import-existing-resources.sh"
+    # Run import script with project configuration
+    PROJECT_NAME="$PROJECT_NAME" AWS_REGION="$AWS_REGION" ./import-existing-resources.sh || {
+        echo "⚠️  Import script encountered issues, but continuing with deployment..."
+        echo "   This is normal if no existing resources were found."
+    }
+else
+    echo "⚠️  Import script not found, skipping import step"
+fi
+
 # Plan deployment
+echo ""
 echo "Planning Terraform deployment..."
 terraform plan \
     -var="aws_region=$AWS_REGION" \
