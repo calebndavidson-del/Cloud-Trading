@@ -69,7 +69,34 @@ class RewardCalculator:
             previous_state: Previous portfolio state
             
         Returns:
-            Step reward value
+
+        The step reward is typically calculated as a weighted sum of multiple components, such as:
+        - Portfolio return (primary reward)
+        - Risk penalty (e.g., based on volatility or drawdown)
+        - Transaction cost penalty
+        - Benchmark-relative performance (optional)
+
+        The weights and penalties for each component are configurable via the `config` dictionary:
+        - `reward_type`: Determines the main reward calculation method (e.g., 'return_based', 'risk_adjusted').
+        - `risk_penalty`: Coefficient for penalizing risk (e.g., volatility, drawdown).
+        - `transaction_cost_penalty`: Coefficient for penalizing transaction costs.
+        - `benchmark`: Optional benchmark for relative rewards.
+
+        The general formula is:
+            reward = (portfolio_return - benchmark_return)
+                     - risk_penalty * risk_measure
+                     - transaction_cost_penalty * transaction_costs
+
+        Custom reward functions can be integrated by extending this method or providing a callable in the config.
+
+        Args:
+            portfolio_state: Current portfolio state
+            action: Action taken by agent
+            market_data: Current market data
+            previous_state: Previous portfolio state
+
+        Returns:
+            Step reward value (float)
         """
         pass
     
