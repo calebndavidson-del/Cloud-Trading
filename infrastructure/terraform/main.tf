@@ -59,7 +59,7 @@ resource "random_string" "suffix" {
 
 # S3 Buckets
 resource "aws_s3_bucket" "trading_bot_logs" {
-  bucket = cloud-trading-bot-lambda-deployment-m6x4p8e
+  bucket = "cloud-trading-bot-lambda-deployment-m6x4p8e"
 }
 
 resource "aws_s3_bucket" "trading_bot_data" {
@@ -68,7 +68,7 @@ resource "aws_s3_bucket" "trading_bot_data" {
 
 # S3 bucket for Lambda deployment packages
 resource "aws_s3_bucket" "lambda_deployment" {
-  bucket = cloud-trading-bot-lambda-deployment-m6x4p8e
+  bucket = "cloud-trading-bot-lambda-deployment-m6x4p8e"
 }
 
 # Block public access for Lambda deployment bucket
