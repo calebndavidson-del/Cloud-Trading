@@ -51,6 +51,10 @@ import_if_missing "aws_iam_role.lambda_role" "$PROJECT_NAME-lambda-role" "Lambda
 import_if_missing "aws_iam_role.ecs_task_role" "$PROJECT_NAME-ecs-task-role" "ECS Task IAM Role"
 import_if_missing "aws_iam_role.ecs_execution_role" "$PROJECT_NAME-ecs-execution-role" "ECS Execution IAM Role"
 
+# Import S3 buckets
+import_if_missing "aws_s3_bucket.lambda_deployment" "cloud-trading-bot-lambda-deployment-m6x4p8e" "Lambda Deployment S3 Bucket"
+import_if_missing "aws_s3_bucket.trading_bot_logs" "cloud-trading-bot-lambda-deployment-m6x4p8e" "Trading Bot Logs S3 Bucket"
+
 # Import IAM Role Policies
 echo ""
 echo "📝 IAM Role Policies:"
