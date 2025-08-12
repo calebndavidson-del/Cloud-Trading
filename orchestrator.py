@@ -156,7 +156,20 @@ class TradingBotOrchestrator:
         
         # RL Agents
         for agent_name, agent_config in models_config.get('rl_agents', {}).items():
-            # Initialize RL agent based on configuration
+        # Initialize storage for predictors and RL agents
+        self.predictors = {}
+        self.rl_agents = {}
+        
+        # ML Predictors
+        for predictor_name, predictor_config in models_config.get('predictors', {}).items():
+            # TODO: Implement initialization of Predictor instances based on predictor_config
+            # Example: self.predictors[predictor_name] = Predictor(predictor_config)
+            pass
+        
+        # RL Agents
+        for agent_name, agent_config in models_config.get('rl_agents', {}).items():
+            # TODO: Implement initialization of RLAgent instances based on agent_config
+            # Example: self.rl_agents[agent_name] = RLAgent(agent_config)
             pass
     
     async def _setup_strategy_management(self) -> None:
