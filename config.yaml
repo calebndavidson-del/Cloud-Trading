@@ -1,0 +1,270 @@
+# Cloud Trading Bot Configuration Template
+# This file provides a template for configuring the trading bot
+# Copy this to config.yaml and adjust values as needed
+
+# Environment Configuration
+environment:
+  name: "development"  # Options: development, staging, production
+  debug: true
+  use_mock_data: true  # Set to false for live data in production
+
+# AWS Configuration
+aws:
+  region: "us-west-2"
+  
+  # DynamoDB Tables (will be created by Terraform)
+  dynamodb:
+    config_table: "cloud-trading-bot-config"
+    state_table: "cloud-trading-bot-state" 
+    trades_table: "cloud-trading-bot-trades"
+  
+  # S3 Buckets (will be created by Terraform)
+  s3:
+    logs_bucket: "cloud-trading-bot-logs"
+    data_bucket: "cloud-trading-bot-data"
+    lambda_deployment_bucket: "cloud-trading-bot-lambda-deployment"
+  
+  # Secrets Manager
+  secrets:
+    secret_name: "cloud-trading-bot-secrets"
+    # Secret will contain:
+    # - yahoo_api_key
+    # - alpha_vantage_key
+    # - iex_cloud_key
+    # - trading_api_key
+    # - trading_api_secret
+  
+  # Lambda Configuration
+  lambda:
+    function_name: "cloud-trading-bot-market-data-fetcher"
+    timeout: 60
+    memory_size: 512
+    runtime: "python3.11"
+  
+  # ECS Configuration  
+  ecs:
+    cluster_name: "cloud-trading-bot-cluster"
+    service_name: "cloud-trading-bot-strategy-service"
+    task_definition: "cloud-trading-bot-strategy-task"
+    cpu: 256
+    memory: 512
+    desired_count: 1
+
+# Trading Configuration
+trading:
+  enabled: false  # Set to true to enable actual trading
+  paper_trading: true  # Always use paper trading for testing
+  
+  # Default symbols to track
+  default_symbols:
+    - "AAPL"
+    - "GOOGL" 
+    - "MSFT"
+    - "AMZN"
+    - "TSLA"
+    - "META"
+    - "NVDA"
+    - "NFLX"
+  
+  # Risk management
+  risk_management:
+    max_position_size: 1000  # Maximum shares per position
+    max_daily_trades: 10     # Maximum trades per day
+    stop_loss_percent: 0.05  # 5% stop loss
+    take_profit_percent: 0.10 # 10% take profit
+    max_portfolio_risk: 0.02  # 2% of portfolio at risk per trade
+
+# Market Data Configuration
+market_data:
+  # Data providers (in order of preference)
+  providers:
+    yahoo_finance:
+      enabled: true
+      priority: 1
+      timeout: 10
+      rate_limit: 2000  # requests per hour
+    
+    alpha_vantage:
+      enabled: true
+      priority: 2
+      timeout: 15
+      rate_limit: 500   # requests per day (free tier)
+    
+    iex_cloud:
+      enabled: true
+      priority: 3
+      timeout: 12
+      rate_limit: 100   # requests per month (free tier)
+  
+  # Data update settings
+  update_interval: 30  # seconds
+  cache_duration: 60   # seconds
+  max_retries: 3
+  retry_delay: 1.0     # seconds
+  
+  # Data fields to fetch
+  fields:
+    - "price"
+    - "volume"
+    - "change"
+    - "change_percent"
+    - "high"
+    - "low"
+    - "open"
+    - "previous_close"
+    - "market_cap"
+
+# Strategy Configuration
+strategy:
+  # Optimization settings
+  optimization:
+    enabled: true
+    schedule: "0 */6 * * *"  # Run every 6 hours (cron format)
+    n_trials: 50             # Number of optimization trials
+    timeout: 300             # Optimization timeout in seconds
+  
+  # Strategy parameters
+  parameters:
+    rsi_period: 14
+    rsi_overbought: 70
+    rsi_oversold: 30
+    moving_average_short: 10
+    moving_average_long: 20
+    bollinger_period: 20
+    bollinger_std: 2
+  
+  # Backtesting
+  backtest:
+    enabled: true
+    historical_days: 252  # Trading days (1 year)
+    initial_capital: 10000
+    commission: 0.01      # 1% commission per trade
+
+# Logging Configuration
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  
+  # Log destinations
+  destinations:
+    console: true
+    file: false
+    cloudwatch: true  # When running in AWS
+    s3: true         # For long-term storage
+  
+  # Log retention (days)
+  retention:
+    cloudwatch: 30
+    s3: 365
+
+# API Server Configuration
+api:
+  host: "0.0.0.0"
+  port: 8000
+  reload: true  # Set to false in production
+  workers: 1    # Number of worker processes
+  
+  # CORS settings
+  cors:
+    allow_origins: ["*"]  # Configure appropriately for production
+    allow_credentials: true
+    allow_methods: ["GET", "POST", "PUT", "DELETE"]
+    allow_headers: ["*"]
+  
+  # Rate limiting
+  rate_limit:
+    enabled: true
+    requests_per_minute: 100
+    requests_per_hour: 1000
+
+# Monitoring and Alerting
+monitoring:
+  # Health checks
+  health_check:
+    enabled: true
+    interval: 30      # seconds
+    timeout: 10       # seconds
+    unhealthy_threshold: 3
+  
+  # Metrics
+  metrics:
+    enabled: true
+    namespace: "CloudTradingBot"
+    
+    # Custom metrics to track
+    custom_metrics:
+      - "trades_executed"
+      - "portfolio_value"
+      - "win_rate"
+      - "sharpe_ratio"
+      - "max_drawdown"
+  
+  # Alerts
+  alerts:
+    enabled: true
+    
+    # Alert conditions
+    conditions:
+      high_error_rate:
+        threshold: 0.05  # 5% error rate
+        period: 300      # 5 minutes
+      
+      trading_stopped:
+        threshold: 3600  # No trades for 1 hour
+      
+      portfolio_loss:
+        threshold: 0.10  # 10% portfolio loss
+
+# Security Configuration
+security:
+  # API authentication
+  api_auth:
+    enabled: false  # Enable for production
+    method: "jwt"   # jwt, api_key
+  
+  # Encryption
+  encryption:
+    at_rest: true   # Enable encryption for data at rest
+    in_transit: true # Enable encryption for data in transit
+  
+  # Network security
+  network:
+    allowed_ips: []  # Restrict API access to specific IPs
+    use_https: true  # Force HTTPS in production
+
+# Features flags
+features:
+  # Enable/disable specific features
+  market_data_fetching: true
+  strategy_optimization: true
+  paper_trading: true
+  live_trading: false  # DANGER: Only enable with extreme caution
+  api_server: true
+  dashboard: true
+  backtesting: true
+  notifications: false
+
+# Development Settings
+development:
+  # Mock data for testing
+  mock_data:
+    enabled: true
+    
+    # Mock price ranges
+    price_ranges:
+      AAPL: [150, 200]
+      GOOGL: [100, 150]
+      MSFT: [300, 400]
+      AMZN: [120, 180]
+      TSLA: [200, 300]
+  
+  # Local testing
+  local_testing:
+    use_localstack: false  # Use LocalStack for local AWS testing
+    localstack_endpoint: "http://localhost:4566"
+  
+  # Debug settings
+  debug:
+    log_sql_queries: false
+    log_api_requests: true
+    log_market_data: false

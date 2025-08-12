@@ -249,6 +249,32 @@ class AWSServicesManager:
         except Exception as e:
             logger.error(f"Error getting ECS service status: {e}")
             return {'error': str(e)}
+    
+    def upload_logs(self, bucket_name: str, key: str, log_data: str) -> bool:
+        """
+        Upload logs to S3 bucket.
+        
+        Args:
+            bucket_name: S3 bucket name
+            key: S3 object key
+            log_data: Log data to upload
+            
+        Returns:
+            True if successful
+        """
+        try:
+            self.s3.put_object(
+                Bucket=bucket_name,
+                Key=key,
+                Body=log_data,
+                ContentType='text/plain'
+            )
+            
+            logger.info(f"Logs uploaded to S3: s3://{bucket_name}/{key}")
+            return True
+        except Exception as e:
+            logger.error(f"Error uploading logs to S3: {e}")
+            return False
 
 # Utility functions
 def create_aws_manager(region: str = None) -> AWSServicesManager:

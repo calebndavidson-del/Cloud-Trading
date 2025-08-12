@@ -1,0 +1,60 @@
+# Core trading and data analysis dependencies
+yfinance>=0.2.0
+pandas>=2.0.0
+numpy>=1.24.0
+scikit-learn>=1.3.0
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+
+# Machine learning and optimization
+optuna>=3.4.0
+
+# Async HTTP client for data fetching
+aiohttp>=3.8.0
+
+# FastAPI and API server dependencies
+fastapi>=0.100.0
+uvicorn[standard]>=0.20.0
+pydantic>=2.0.0
+mangum>=0.17.0  # For AWS Lambda integration
+httpx>=0.24.0  # For testing
+
+# AWS SDK and cloud services
+boto3>=1.34.0
+botocore>=1.34.0
+watchtower>=3.0.0  # CloudWatch logging
+
+# Configuration and environment management
+python-dotenv>=1.0.0
+pyyaml>=6.0
+
+# Monitoring and logging
+structlog>=23.0.0
+prometheus-client>=0.17.0
+
+# Testing and development
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+pytest-mock>=3.11.0
+moto>=4.2.0  # AWS service mocking
+localstack-client>=2.0.0  # Local AWS testing
+
+# Web dashboard (optional)
+streamlit>=1.28.0
+
+# Additional utilities
+python-dateutil>=2.8.0
+pytz>=2023.3
+click>=8.1.0  # CLI tools
+tqdm>=4.65.0  # Progress bars
+
+# Performance and optimization
+cython>=3.0.0  # Optional: for performance improvements
+numba>=0.58.0  # Optional: for numerical computations
+
+# Data storage and serialization
+sqlalchemy>=2.0.0  # Optional: for database operations
+redis>=4.6.0  # Optional: for caching
+
+# Security
+cryptography>=41.0.0
