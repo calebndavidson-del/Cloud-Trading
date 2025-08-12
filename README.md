@@ -9,7 +9,9 @@ A sophisticated, cloud-native trading bot with a fully managed AWS backend infra
 - **AWS Lambda**: Serverless market data fetcher with automatic failover
 - **Amazon ECS**: Always-on strategy engine running in containers
 - **Amazon DynamoDB**: Configuration, state, and trade data storage
-- **Amazon S3**: Log storage and data archival
+- **Amazon S3**: Log storage and data archival (consolidated single bucket architecture)
+
+> **📘 S3 Architecture**: This project uses a single S3 bucket (`cloud-trading-bot-lambda-deployment-m6x4p8e`) for all storage needs with organized prefixes. See [S3_BUCKET_CONSOLIDATION.md](S3_BUCKET_CONSOLIDATION.md) for details.
 - **AWS Secrets Manager**: Secure API key management
 - **Amazon CloudWatch**: Monitoring and logging
 - **Amazon EventBridge**: Scheduled data fetching

@@ -355,12 +355,12 @@ output "lambda_s3_key" {
 }
 
 output "s3_logs_bucket" {
-  value = aws_s3_bucket.lambda_deployment.bucket
+  value       = aws_s3_bucket.lambda_deployment.bucket
   description = "S3 bucket for logs (same as deployment bucket)"
 }
 
 output "s3_data_bucket" {
-  value = aws_s3_bucket.lambda_deployment.bucket
+  value       = aws_s3_bucket.lambda_deployment.bucket
   description = "S3 bucket for data (same as deployment bucket)"
 }
 
