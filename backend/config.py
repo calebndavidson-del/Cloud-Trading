@@ -43,10 +43,17 @@ ECS_CLUSTER_NAME = os.getenv("ECS_CLUSTER_NAME", "trading-bot-cluster")
 ECS_SERVICE_NAME = os.getenv("ECS_SERVICE_NAME", "trading-bot-strategy")
 ECS_TASK_DEFINITION = os.getenv("ECS_TASK_DEFINITION", "trading-bot-strategy-task")
 
-# Trading Configuration
-DEFAULT_SYMBOLS = os.getenv("DEFAULT_SYMBOLS", "AAPL,GOOGL,MSFT,TSLA,AMZN,META,NVDA,NFLX").split(",")
+# Trading Configuration - Autonomous Mode
+# Note: DEFAULT_SYMBOLS is deprecated in favor of autonomous selection
+AUTONOMOUS_SELECTION = os.getenv("AUTONOMOUS_SELECTION", "true").lower() == "true"
+MAX_POSITIONS = int(os.getenv("MAX_POSITIONS", "15"))
+MIN_MARKET_CAP = float(os.getenv("MIN_MARKET_CAP", "1e9"))  # $1B default
+MIN_VOLUME = int(os.getenv("MIN_VOLUME", "500000"))  # 500K shares
 TRADING_ENABLED = os.getenv("TRADING_ENABLED", "false").lower() == "true"
 PAPER_TRADING = os.getenv("PAPER_TRADING", "true").lower() == "true"
+
+# Legacy fallback symbols (only used if autonomous selection fails)
+FALLBACK_SYMBOLS = os.getenv("FALLBACK_SYMBOLS", "AAPL,MSFT,GOOGL").split(",")
 
 # Logging Configuration
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
@@ -94,9 +101,13 @@ def get_config() -> Dict[str, Any]:
             }
         },
         "trading": {
-            "default_symbols": DEFAULT_SYMBOLS,
+            "autonomous_selection": AUTONOMOUS_SELECTION,
+            "max_positions": MAX_POSITIONS,
+            "min_market_cap": MIN_MARKET_CAP,
+            "min_volume": MIN_VOLUME,
             "trading_enabled": TRADING_ENABLED,
-            "paper_trading": PAPER_TRADING
+            "paper_trading": PAPER_TRADING,
+            "fallback_symbols": FALLBACK_SYMBOLS
         },
         "logging": {
             "level": LOG_LEVEL,

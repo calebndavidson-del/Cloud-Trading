@@ -293,6 +293,17 @@ export const backendAPI = {
     return apiClient.get('/data/earnings', { symbols: symbols.join(',') });
   },
 
+  /**
+   * Autonomous Stock Selection
+   */
+  async getAutonomousSelection(maxSymbols = 15) {
+    return apiClient.get('/data/autonomous-selection', { max_symbols: maxSymbols });
+  },
+
+  async refreshAutonomousSelection(criteria = {}) {
+    return apiClient.post('/data/autonomous-selection/refresh', criteria);
+  },
+
   async getPortfolioAnalytics(period = '1M') {
     return apiClient.get('/analytics/portfolio', { period });
   },

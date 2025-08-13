@@ -20,7 +20,7 @@ def fetch_market_data(symbols: list = None, use_mock: bool = None) -> Dict[str, 
     Fetch LIVE market data - NO MOCK DATA ALLOWED.
     
     Args:
-        symbols: List of stock symbols to fetch. Defaults to ['AAPL', 'GOOGL', 'MSFT']
+        symbols: List of stock symbols to fetch. If None, uses autonomous selection
         use_mock: DEPRECATED - Mock data is not allowed in production
     
     Returns:
@@ -30,7 +30,10 @@ def fetch_market_data(symbols: list = None, use_mock: bool = None) -> Dict[str, 
         Exception: If live data cannot be fetched or if mock data is requested
     """
     if symbols is None:
-        symbols = ['AAPL', 'GOOGL', 'MSFT', 'TSLA', 'AMZN']
+        # Use autonomous stock selection
+        from backend.market_scanner import get_autonomous_stock_selection
+        symbols = get_autonomous_stock_selection(max_stocks=10)
+        logger.info(f"Using autonomous stock selection: {symbols}")
     
     # ENFORCE LIVE-ONLY MODE - No mock data allowed
     if use_mock is True:
@@ -71,7 +74,12 @@ def _fetch_direct_live_data(symbols: List[str]) -> Dict[str, Any]:
                 
                 # Validate data freshness
                 latest_timestamp = hist.index[-1].to_pydatetime()
-                age_seconds = (datetime.now() - latest_timestamp).total_seconds()
+                # Ensure timezone-naive comparison
+                if latest_timestamp.tzinfo is not None:
+                    latest_timestamp = latest_timestamp.replace(tzinfo=None)
+                
+                current_time = datetime.now()
+                age_seconds = (current_time - latest_timestamp).total_seconds()
                 
                 if age_seconds > 300:  # 5 minutes max age
                     logger.warning(f"Data for {symbol} is {age_seconds/60:.1f} minutes old")

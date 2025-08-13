@@ -246,6 +246,9 @@ class LiveMarketDataManager:
             for field in ['timestamp', 'time', 'last_updated', 'date']:
                 if field in data:
                     timestamp = pd.to_datetime(data[field])
+                    # Convert to timezone-naive datetime if it's timezone-aware
+                    if timestamp.tz is not None:
+                        timestamp = timestamp.tz_convert('UTC').tz_localize(None)
                     break
             
             if timestamp is None:
@@ -253,8 +256,9 @@ class LiveMarketDataManager:
                 timestamp = datetime.now()
                 logger.warning(f"No timestamp found in data from {source.value}, assuming current time")
             
-            # Calculate age
-            age_seconds = (datetime.now() - timestamp).total_seconds()
+            # Calculate age (ensure both are timezone-naive)
+            current_time = datetime.now()
+            age_seconds = (current_time - timestamp).total_seconds()
             
             # Determine freshness
             if age_seconds < 60:
@@ -456,7 +460,7 @@ class LiveMarketDataManager:
                             'low': float(quote.get('low', 0)),
                             'market_cap': int(quote.get('marketCap', 0)),
                             'pe_ratio': float(quote.get('peRatio', 0)) if quote.get('peRatio') else 0,
-                            'timestamp': pd.to_datetime(quote.get('latestUpdate', 0), unit='ms').to_pydatetime()
+                            'timestamp': pd.to_datetime(quote.get('latestUpdate', 0), unit='ms').tz_localize(None)
                         }
                         
                         quality = self._validate_data_quality(data, DataSource.IEX_CLOUD)
@@ -574,7 +578,12 @@ class LiveMarketDataManager:
             
             # Validate data freshness for the most recent point
             latest_timestamp = hist.index[-1].to_pydatetime()
-            age_seconds = (datetime.now() - latest_timestamp).total_seconds()
+            # Ensure timezone-naive comparison
+            if latest_timestamp.tzinfo is not None:
+                latest_timestamp = latest_timestamp.replace(tzinfo=None)
+            
+            current_time = datetime.now()
+            age_seconds = (current_time - latest_timestamp).total_seconds()
             
             # For historical data, we're more lenient but still enforce reasonable freshness
             max_age = 86400  # 24 hours for daily data
