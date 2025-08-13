@@ -6,7 +6,7 @@ import time
 import logging
 from typing import Dict, List, Any
 from market_data_manager import MarketDataManager
-from backend_data_collector_Version2 import fetch_market_data, get_provider_status, get_cache_info
+from backend.data_collector import fetch_market_data
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -140,13 +140,8 @@ class TradingStrategy:
             logger.info(f"Cash: ${self.cash:,.2f}")
             logger.info(f"Positions: {self.positions}")
             
-            # Show provider status
-            status = get_provider_status()
-            logger.info(f"Provider status: {status}")
-            
-            # Show cache info
-            cache_info = get_cache_info()
-            logger.info(f"Cache info: {cache_info}")
+            # Note: Provider status and cache info removed as part of Version2 cleanup
+            logger.info("Data collection completed successfully")
             
             # Wait before next iteration (in real scenario, this would be market hours)
             if iteration < 2:

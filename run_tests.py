@@ -107,7 +107,7 @@ def validate_installation():
     
     if missing_packages:
         print(f"❌ Missing packages: {', '.join(missing_packages)}")
-        print("Please install with: pip install -r requirements_Version9.txt")
+        print("Please install with: pip install -r requirements.txt")
         return False
     
     print("✅ All required packages installed")

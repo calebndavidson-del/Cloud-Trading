@@ -66,7 +66,7 @@ def test_market_data_manager():
     
     # We can't easily test the full manager without modifying it,
     # but we can test the structure of the response
-    from backend_data_collector_Version2 import fetch_market_data
+    from backend.data_collector import fetch_market_data
     
     # This will fail with network errors but return fallback data
     data = fetch_market_data(['AAPL', 'GOOGL'])
