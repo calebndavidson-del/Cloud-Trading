@@ -5,8 +5,15 @@ Provides essential REST endpoints for the trading bot functionality
 import json
 import logging
 from datetime import datetime
-from firebase_functions import https_fn, options
-from flask import Request, jsonify
+
+# Try to import Firebase Functions, fall back to Flask for testing
+try:
+    from firebase_functions import https_fn, options
+    from flask import Request, jsonify
+    FIREBASE_MODE = True
+except ImportError:
+    from flask import Flask, request as Request, jsonify
+    FIREBASE_MODE = False
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -18,21 +25,37 @@ PORTFOLIO_STATE = {
     'last_updated': datetime.utcnow().isoformat()
 }
 
-@https_fn.on_request(
-    cors=options.CorsOptions(
-        cors_origins=["*"],
-        cors_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+if FIREBASE_MODE:
+    @https_fn.on_request(
+        cors=options.CorsOptions(
+            cors_origins=["*"],
+            cors_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+        )
     )
-)
-def api(req: Request):
-    """Main API function handler for all endpoints"""
+    def api(req: Request):
+        """Main API function handler for all endpoints"""
+        return handle_request(req)
+else:
+    # Flask app for testing
+    app = Flask(__name__)
+    
+    @app.route('/api/<path:endpoint>', methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
+    def api_flask(endpoint):
+        """Flask endpoint handler for testing"""
+        return handle_request(Request)
+
+def handle_request(req):
+    """Handle API requests (works for both Firebase and Flask)"""
     
     # Handle CORS preflight
     if req.method == 'OPTIONS':
         return jsonify({'status': 'ok'}), 200
     
     # Get the path after /api
-    path = req.path.replace('/api', '').strip('/')
+    if FIREBASE_MODE:
+        path = req.path.replace('/api', '').strip('/')
+    else:
+        path = req.endpoint or 'health'  # Default for testing
     
     try:
         if path == 'status':
@@ -79,7 +102,10 @@ def handle_status(req):
 
 def handle_market_data(req):
     """Get mock market data for demo purposes"""
-    symbols = req.args.get('symbols', 'AAPL,GOOGL,MSFT').split(',')
+    if FIREBASE_MODE:
+        symbols = req.args.get('symbols', 'AAPL,GOOGL,MSFT').split(',')
+    else:
+        symbols = getattr(req, 'args', {}).get('symbols', 'AAPL,GOOGL,MSFT').split(',')
     
     # Mock market data - in production, this would fetch from real data sources
     mock_data = {}
@@ -125,7 +151,11 @@ def handle_update_equity(req):
         return jsonify({'error': 'Method not allowed'}), 405
     
     try:
-        data = req.get_json()
+        if FIREBASE_MODE:
+            data = req.get_json()
+        else:
+            data = getattr(req, 'json_data', None)
+            
         if not data or 'equity' not in data:
             return jsonify({'error': 'Missing equity value in request'}), 400
         
@@ -165,3 +195,7 @@ def handle_config(req):
     }
     
     return jsonify(config), 200
+
+# For testing without Firebase
+if not FIREBASE_MODE and __name__ == "__main__":
+    app.run(debug=True, port=5001)
