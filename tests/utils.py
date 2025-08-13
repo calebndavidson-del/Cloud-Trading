@@ -275,6 +275,7 @@ class TestDataGenerator:
         import random
         from datetime import datetime, timedelta
         
+        
         trades = []
         symbols = ['AAPL', 'GOOGL', 'MSFT', 'TSLA']
         base_date = datetime.now() - timedelta(days=30)
