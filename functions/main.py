@@ -4,7 +4,13 @@ Provides essential REST endpoints for the trading bot functionality
 """
 import json
 import logging
+import asyncio
+import sys
+import os
 from datetime import datetime
+
+# Add the parent directory to the path so we can import backend modules
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Try to import Firebase Functions, fall back to Flask for testing
 try:
@@ -15,9 +21,20 @@ except ImportError:
     from flask import Flask, request as Request, jsonify
     FIREBASE_MODE = False
 
+# Import backend modules for live data
+try:
+    from backend.live_data_manager import get_live_market_data_manager
+    from backend.data_collector import fetch_market_data, fetch_market_trends
+    LIVE_DATA_AVAILABLE = True
+    logger = logging.getLogger(__name__)
+    logger.info("Live data modules imported successfully")
+except ImportError as e:
+    LIVE_DATA_AVAILABLE = False
+    logger = logging.getLogger(__name__)
+    logger.warning(f"Could not import live data modules: {e}")
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 # Global state for equity (in production, this would be stored in Firestore)
 PORTFOLIO_STATE = {
@@ -101,49 +118,81 @@ def handle_status(req):
     }), 200
 
 def handle_market_data(req):
-    """Get mock market data for demo purposes"""
+    """Get live market data from real data sources"""
     if FIREBASE_MODE:
         symbols = req.args.get('symbols', 'AAPL,GOOGL,MSFT').split(',')
     else:
         symbols = getattr(req, 'args', {}).get('symbols', 'AAPL,GOOGL,MSFT').split(',')
     
-    # Mock market data - in production, this would fetch from real data sources
-    mock_data = {}
-    for symbol in symbols:
-        if symbol.strip():
-            mock_data[symbol.strip()] = {
-                'price': 150.00 + hash(symbol) % 100,
-                'change': (hash(symbol) % 10) - 5,
-                'change_percent': ((hash(symbol) % 10) - 5) / 150.0 * 100,
-                'volume': 1000000 + hash(symbol) % 500000,
-                'timestamp': datetime.utcnow().isoformat() + 'Z'
-            }
+    # Clean up symbols list
+    symbols = [s.strip() for s in symbols if s.strip()]
     
-    return jsonify({
-        'timestamp': datetime.utcnow().isoformat() + 'Z',
-        'symbols': symbols,
-        'data': mock_data,
-        'status': 'success'
-    }), 200
+    if not LIVE_DATA_AVAILABLE:
+        logger.error("Live data modules not available, cannot fetch real market data")
+        return jsonify({
+            'error': 'Live data service unavailable',
+            'message': 'Backend live data modules not accessible',
+            'symbols': symbols,
+            'status': 'error'
+        }), 503
+    
+    try:
+        # Use live data fetcher - this is synchronous but may need async wrapper
+        live_data = asyncio.run(fetch_market_data(symbols))
+        
+        if not live_data or not live_data.get('data'):
+            raise Exception("No live data returned")
+        
+        return jsonify({
+            'timestamp': datetime.utcnow().isoformat() + 'Z',
+            'symbols': symbols,
+            'data': live_data['data'],
+            'source': 'live_data',
+            'status': 'success'
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error fetching live market data: {e}")
+        # In production, we fail rather than return mock data
+        return jsonify({
+            'error': 'Failed to fetch live market data',
+            'message': str(e),
+            'symbols': symbols,
+            'status': 'error'
+        }), 500
 
 def handle_market_trends(req):
-    """Get mock market trends"""
-    trends = {
-        'market_sentiment': 'neutral',
-        'volatility_index': 18.5,
-        'fear_greed_index': 65,
-        'major_indices': {
-            'SPY': {'price': 420.50, 'change': 2.1},
-            'QQQ': {'price': 350.25, 'change': -1.5},
-            'IWM': {'price': 185.75, 'change': 0.8}
-        }
-    }
+    """Get live market trends from real data sources"""
+    if not LIVE_DATA_AVAILABLE:
+        logger.error("Live data modules not available, cannot fetch real market trends")
+        return jsonify({
+            'error': 'Live data service unavailable',
+            'message': 'Backend live data modules not accessible',
+            'status': 'error'
+        }), 503
     
-    return jsonify({
-        'timestamp': datetime.utcnow().isoformat() + 'Z',
-        'trends': trends,
-        'status': 'success'
-    }), 200
+    try:
+        # Use live data fetcher for market trends
+        live_trends = asyncio.run(fetch_market_trends())
+        
+        if not live_trends:
+            raise Exception("No live trends data returned")
+        
+        return jsonify({
+            'timestamp': datetime.utcnow().isoformat() + 'Z',
+            'trends': live_trends,
+            'source': 'live_data',
+            'status': 'success'
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error fetching live market trends: {e}")
+        # In production, we fail rather than return mock data
+        return jsonify({
+            'error': 'Failed to fetch live market trends',
+            'message': str(e),
+            'status': 'error'
+        }), 500
 
 def handle_update_equity(req):
     """Handle equity update requests"""

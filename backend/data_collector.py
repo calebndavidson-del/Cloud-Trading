@@ -71,7 +71,12 @@ def _fetch_direct_live_data(symbols: List[str]) -> Dict[str, Any]:
                 
                 # Validate data freshness
                 latest_timestamp = hist.index[-1].to_pydatetime()
-                age_seconds = (datetime.now() - latest_timestamp).total_seconds()
+                # Ensure timezone-naive comparison
+                if latest_timestamp.tzinfo is not None:
+                    latest_timestamp = latest_timestamp.replace(tzinfo=None)
+                
+                current_time = datetime.now()
+                age_seconds = (current_time - latest_timestamp).total_seconds()
                 
                 if age_seconds > 300:  # 5 minutes max age
                     logger.warning(f"Data for {symbol} is {age_seconds/60:.1f} minutes old")
