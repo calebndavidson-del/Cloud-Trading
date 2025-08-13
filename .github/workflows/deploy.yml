@@ -29,8 +29,11 @@ jobs:
 
       - name: Test Python backend
         run: |
+          echo "Testing backend configuration..."
           python -c "from backend.config import get_config; print('Backend config test passed')"
+          echo "Testing API import..."
           python -c "from api import app; print('API import test passed')"
+          echo "Backend tests completed successfully"
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -40,7 +43,7 @@ jobs:
       - name: Install frontend dependencies
         run: |
           cd frontend
-          npm ci
+          npm install
 
       - name: Test frontend build
         run: |
@@ -71,8 +74,10 @@ jobs:
 
       - name: Build Docker image
         run: |
+          echo "Building Docker images..."
           docker build -t us-west1-docker.pkg.dev/$PROJECT_ID/cloud-trading-bot/$SERVICE_NAME:$GITHUB_SHA .
           docker build -t us-west1-docker.pkg.dev/$PROJECT_ID/cloud-trading-bot/$SERVICE_NAME:latest .
+          echo "Docker images built successfully"
 
       - name: Push Docker image
         run: |
@@ -117,12 +122,19 @@ jobs:
       - name: Build frontend
         run: |
           cd frontend
-          npm ci
+          echo "Installing frontend dependencies..."
+          npm install
+          echo "Building frontend for production..."
           npm run build
+          echo "Frontend built successfully"
 
       - name: Deploy to Firebase Hosting
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
         run: |
           cd frontend
+          echo "Deploying to Firebase Hosting..."
           firebase deploy --project ${{ secrets.FIREBASE_PROJECT_ID }} --token $FIREBASE_TOKEN --only hosting
+          echo "Firebase Hosting deployment completed"
+nly hosting
+ting
