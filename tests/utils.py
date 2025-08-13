@@ -73,7 +73,6 @@ class MockMarketDataProvider:
             time.sleep(self.latency)
         
         # Simulate failures if configured
-        import random
         if random.random() < self.failure_rate:
             raise Exception(f"Mock failure for {symbol}")
         
