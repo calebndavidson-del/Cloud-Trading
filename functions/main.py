@@ -54,7 +54,9 @@ if FIREBASE_MODE:
         return handle_request(req)
 else:
     # Flask app for testing
+    from flask_cors import CORS
     app = Flask(__name__)
+    CORS(app)  # Enable CORS for all routes
     
     @app.route('/api/<path:endpoint>', methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
     def api_flask(endpoint):
@@ -93,6 +95,8 @@ def handle_request_flask(req, endpoint):
             return handle_optimization_endpoints(req, path)
         elif path.startswith('trading/'):
             return handle_trading_endpoints(req, path)
+        elif path.startswith('system/'):
+            return handle_system_endpoints(req, path)
         else:
             return jsonify({'error': 'Endpoint not found'}), 404
             
@@ -140,6 +144,8 @@ def handle_request(req):
             return handle_optimization_endpoints(req, path)
         elif path.startswith('trading/'):
             return handle_trading_endpoints(req, path)
+        elif path.startswith('system/'):
+            return handle_system_endpoints(req, path)
         else:
             return jsonify({'error': 'Endpoint not found'}), 404
             
@@ -713,6 +719,42 @@ def run_optimization_job(job_id, config):
         JOBS[job_id]['status'] = 'failed'
         JOBS[job_id]['end_time'] = datetime.utcnow().isoformat()
         JOBS[job_id]['message'] = f'Optimization failed: {str(e)}'
+
+def handle_system_endpoints(req, path):
+    """Handle system-related endpoints"""
+    # Remove 'system/' prefix
+    endpoint = path[7:]  # Remove 'system/'
+    
+    if endpoint == 'status':
+        return handle_status(req)
+    elif endpoint == 'start':
+        return handle_system_start(req)
+    elif endpoint == 'stop':
+        return handle_system_stop(req)
+    else:
+        return jsonify({'error': 'System endpoint not found'}), 404
+
+def handle_system_start(req):
+    """Handle system start request"""
+    if req.method != 'POST':
+        return jsonify({'error': 'Method not allowed'}), 405
+    
+    return jsonify({
+        'status': 'success',
+        'message': 'Trading system started',
+        'timestamp': datetime.utcnow().isoformat() + 'Z'
+    }), 200
+
+def handle_system_stop(req):
+    """Handle system stop request"""
+    if req.method != 'POST':
+        return jsonify({'error': 'Method not allowed'}), 405
+    
+    return jsonify({
+        'status': 'success', 
+        'message': 'Trading system stopped',
+        'timestamp': datetime.utcnow().isoformat() + 'Z'
+    }), 200
 
 # For testing without Firebase
 if not FIREBASE_MODE and __name__ == "__main__":
