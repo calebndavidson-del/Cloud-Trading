@@ -44,13 +44,14 @@ const App = () => {
       });
     } catch (err) {
       if (process.env.NODE_ENV === 'development') {
-        // console.error('Failed to fetch system status:', err);
+        console.error('Failed to fetch system status:', err);
       }
       setSystemStatus(prev => ({
         ...prev,
         isOnline: false,
         lastUpdate: new Date()
       }));
+      // Don't treat status fetch failures as fatal errors
     }
   }, []);
 
@@ -65,18 +66,26 @@ const App = () => {
       // Fetch initial system status
       await fetchSystemStatus();
       
-      // Verify backend connectivity
-      const healthCheck = await backendAPI.healthCheck();
-      if (!healthCheck.success) {
-        throw new Error('Backend connectivity check failed');
+      // Try to verify backend connectivity, but don't fail if it's not available
+      try {
+        const healthCheck = await backendAPI.healthCheck();
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Backend health check:', healthCheck);
+        }
+      } catch (healthErr) {
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('Backend health check failed:', healthErr.message);
+        }
+        // Continue anyway - the app can still show the UI
       }
       
       setLoading(false);
     } catch (err) {
-      setError(err.message);
+      const errorMessage = err.message || 'Failed to initialize application';
+      setError(`${errorMessage}. The dashboard may have limited functionality.`);
       setLoading(false);
       if (process.env.NODE_ENV === 'development') {
-        // console.error('App initialization error:', err);
+        console.error('App initialization error:', err);
       }
     }
   }, [fetchSystemStatus]);

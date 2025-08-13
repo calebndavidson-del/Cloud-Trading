@@ -21,6 +21,8 @@ const LiveTradingTab = ({ systemStatus, onRefresh, loading }) => {
   const [riskMetrics, setRiskMetrics] = useState({});
   const [selectedTimeframe, setSelectedTimeframe] = useState('1D');
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [equityInput, setEquityInput] = useState('');
+  const [showEquityModal, setShowEquityModal] = useState(false);
 
   /**
    * Fetch live trading data from backend
@@ -78,8 +80,27 @@ const LiveTradingTab = ({ systemStatus, onRefresh, loading }) => {
   };
 
   /**
-   * Handle position closure
+   * Handle equity update
    */
+  const handleUpdateEquity = async () => {
+    const equity = parseFloat(equityInput);
+    if (isNaN(equity) || equity <= 0) {
+      alert('Please enter a valid positive number for equity');
+      return;
+    }
+
+    try {
+      const result = await backendAPI.updateEquity(equity);
+      alert(result.message || `Equity updated to $${equity.toLocaleString()}`);
+      setShowEquityModal(false);
+      setEquityInput('');
+      await fetchLiveTradingData();
+      onRefresh();
+    } catch (error) {
+      console.error('Failed to update equity:', error);
+      alert('Failed to update equity: ' + error.message);
+    }
+  };
   const handleClosePosition = async (symbol) => {
     const confirmed = window.confirm(`Are you sure you want to close position in ${symbol}?`);
     if (confirmed) {
@@ -121,6 +142,14 @@ const LiveTradingTab = ({ systemStatus, onRefresh, loading }) => {
           </div>
         </div>
         <div className="col-md-4 text-end">
+          <button
+            className="btn btn-outline-success btn-sm me-2"
+            onClick={() => setShowEquityModal(true)}
+            title="Adjust Portfolio Equity"
+          >
+            <i className="fas fa-edit me-1"></i>
+            Adjust Equity
+          </button>
           <button
             className="btn btn-outline-primary btn-sm me-2"
             onClick={fetchLiveTradingData}
@@ -358,6 +387,65 @@ const LiveTradingTab = ({ systemStatus, onRefresh, loading }) => {
           <strong>Trading System Offline</strong> - 
           Real-time data and trading functions are not available. 
           Please start the trading system to access live functionality.
+        </div>
+      )}
+
+      {/* Equity Adjustment Modal */}
+      {showEquityModal && (
+        <div className="modal d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">
+                  <i className="fas fa-edit me-2"></i>
+                  Adjust Portfolio Equity
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={() => setShowEquityModal(false)}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <div className="mb-3">
+                  <label htmlFor="equityInput" className="form-label">
+                    New Equity Amount ($)
+                  </label>
+                  <input
+                    type="number"
+                    className="form-control"
+                    id="equityInput"
+                    value={equityInput}
+                    onChange={(e) => setEquityInput(e.target.value)}
+                    placeholder="Enter new equity amount"
+                    min="0.01"
+                    step="0.01"
+                  />
+                  <div className="form-text">
+                    Enter the new portfolio equity value. This will update the total available capital for trading.
+                  </div>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setShowEquityModal(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={handleUpdateEquity}
+                  disabled={!equityInput || parseFloat(equityInput) <= 0}
+                >
+                  <i className="fas fa-save me-1"></i>
+                  Update Equity
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

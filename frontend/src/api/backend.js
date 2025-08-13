@@ -15,7 +15,7 @@
 // Configuration
 const API_CONFIG = {
   baseURL: process.env.REACT_APP_API_URL || 'http://localhost:8000/api',
-  timeout: 30000,
+  timeout: parseInt(process.env.REACT_APP_API_TIMEOUT) || 30000,
   retryAttempts: 3,
   retryDelay: 1000
 };
@@ -57,18 +57,37 @@ class APIClient {
         clearTimeout(timeoutId);
 
         if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          const errorText = await response.text();
+          let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+          
+          try {
+            const errorData = JSON.parse(errorText);
+            if (errorData.error) {
+              errorMessage = errorData.error;
+            }
+          } catch (e) {
+            // Use default error message if parsing fails
+            if (errorText) {
+              errorMessage = errorText;
+            }
+          }
+          
+          throw new Error(errorMessage);
         }
 
         const data = await response.json();
         return data;
       } catch (error) {
+        const errorMessage = error.name === 'AbortError' 
+          ? 'Request timeout - please try again' 
+          : error.message || 'Failed to connect to backend';
+          
         if (process.env.NODE_ENV === 'development') {
-          // console.error(`API request attempt ${attempt} failed:`, error);
+          console.error(`API request attempt ${attempt} failed:`, error);
         }
 
         if (attempt === this.config.retryAttempts) {
-          throw error;
+          throw new Error(errorMessage);
         }
 
         // Wait before retry
@@ -287,6 +306,13 @@ export const backendAPI = {
 
   async updateConfiguration(config) {
     return apiClient.put('/config', config);
+  },
+
+  /**
+   * Equity Management
+   */
+  async updateEquity(equity) {
+    return apiClient.post('/update-equity', { equity });
   },
 
   /**

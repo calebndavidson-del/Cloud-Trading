@@ -1,53 +1,103 @@
-# Cloud Trading Bot - Modern Cloud Deployment
+# Cloud Trading Bot - Firebase Deployment
 
-A sophisticated trading bot with modern cloud-native deployment using Google Cloud Run and Vercel. Migrated from complex AWS infrastructure to developer-friendly platforms for instant deployment and automatic scaling.
+A sophisticated trading bot with modern cloud-native deployment using Firebase Hosting and Functions. This version provides instant deployment with automatic scaling and zero infrastructure maintenance.
 
-## 🏗️ Modern Architecture
+## 🏗️ Firebase Architecture
 
-### New Cloud-Native Stack
-- **Backend**: Python Flask API → Google Cloud Run (containerized, auto-scaling)
-- **Frontend**: React Dashboard → Vercel (instant GitHub integration)
+### Firebase Stack
+- **Frontend**: React Dashboard → Firebase Hosting (global CDN)
+- **Backend**: Python Functions → Firebase Functions (serverless)
+- **Database**: Firestore (real-time, scalable)
 - **CI/CD**: GitHub Actions (automated deployment on push)
-- **Database**: Environment variables (easily upgradeable to Cloud SQL)
+
+### Primary Firebase Project
+- **Project ID**: `cloud-trading-bot-468900`
+- **Region**: us-central1 (recommended for Functions)
+- **Hosting URL**: `https://cloud-trading-bot-468900.web.app`
 
 ### Migration Benefits
-- ✅ **60-80% cost reduction** vs AWS infrastructure
-- ✅ **Minutes to deploy** vs hours of terraform setup  
-- ✅ **Zero infrastructure maintenance** required
-- ✅ **Automatic scaling** (scales to zero when not in use)
+- ✅ **Serverless scaling** (automatic scale to zero)
+- ✅ **Global CDN** for frontend delivery
+- ✅ **Real-time database** with Firestore
+- ✅ **Integrated authentication** (if needed)
 - ✅ **Git push = deploy** workflow
 
-## 🚀 Quick Start (New Deployment)
+## 🚀 Quick Start (Firebase Deployment)
 
 ### 1. Prerequisites
 - GitHub account
-- Google Cloud account (free tier available)
-- Vercel account (free tier available)
+- Firebase account (free tier available)
+- Node.js 18+ and npm
+- Firebase CLI: `npm install -g firebase-tools`
 
-### 2. One-Click Setup
+### 2. Firebase Setup
 ```bash
-# Fork this repository, then clone your fork
+# Clone the repository
 git clone https://github.com/YOUR_USERNAME/Cloud-Trading.git
 cd Cloud-Trading
 
-# Run local setup
-chmod +x setup-local.sh
-./setup-local.sh
+# Install Firebase CLI if not already installed
+npm install -g firebase-tools
+
+# Login to Firebase
+firebase login
+
+# Initialize Firebase project (if not already done)
+firebase init
+
+# Select project: cloud-trading-bot-468900
+# Enable Hosting and Functions
 ```
 
-### 3. Cloud Deployment
-Follow the comprehensive guide in [DEPLOYMENT.md](./DEPLOYMENT.md) for:
-- Google Cloud Run backend deployment
-- Vercel frontend deployment  
-- GitHub Actions CI/CD setup
-- Environment configuration
+### 3. Local Development
+```bash
+# Install frontend dependencies
+cd frontend
+npm install
+
+# Install functions dependencies  
+cd ../functions
+pip install -r requirements.txt
+
+# Start local development
+cd ..
+firebase emulators:start
+```
+
+### 4. Deploy to Firebase
+```bash
+# Deploy everything (hosting + functions)
+firebase deploy
+
+# Deploy only hosting
+firebase deploy --only hosting
+
+# Deploy only functions
+firebase deploy --only functions
+```
 
 ### 4. Test Locally
 ```bash
-# Start backend
-PYTHONPATH=$(pwd) python api.py
+# Start Firebase emulators for local development
+firebase emulators:start
 
-# Start frontend (in another terminal)
+# The dashboard will be available at:
+# Frontend: http://localhost:5000
+# Functions: http://localhost:5001/cloud-trading-bot-468900/us-central1/api
+```
+
+## 🔧 Configuration
+
+### Environment Variables
+- Frontend environment: `frontend/.env.production`
+- Functions environment: Set via Firebase Console or CLI
+
+### API Endpoints
+- Health Check: `/api/health`  
+- System Status: `/api/status`
+- Market Data: `/api/market-data`
+- Update Equity: `/api/update-equity` (POST)
+- Configuration: `/api/config`
 cd frontend && npm start
 ```
 
