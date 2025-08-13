@@ -34,9 +34,20 @@ def run_bot():
         logger.info(f"Starting ADVANCED trading bot in {config['env']} environment")
         logger.info("LIVE DATA ONLY MODE - No mock data allowed")
         
-        # Get symbols to analyze
-        symbols = config['trading']['default_symbols']
-        logger.info(f"Analyzing {len(symbols)} symbols: {symbols}")
+        # Use autonomous stock selection instead of hardcoded symbols
+        from backend.market_scanner import get_autonomous_stock_selection
+        
+        max_positions = config.get('trading', {}).get('max_positions', 10)
+        logger.info("🔍 Performing autonomous stock selection...")
+        
+        # Get autonomously selected symbols
+        symbols = get_autonomous_stock_selection(max_stocks=max_positions)
+        
+        if not symbols:
+            logger.warning("No stocks selected by autonomous scanner, using fallback")
+            symbols = ['AAPL', 'MSFT', 'GOOGL']  # Minimal fallback
+            
+        logger.info(f"✅ Autonomously selected {len(symbols)} symbols for analysis: {symbols}")
         
         # Run comprehensive analysis
         decisions = asyncio.run(run_comprehensive_analysis(symbols))

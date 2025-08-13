@@ -68,11 +68,17 @@ def handle_request(req):
     if req.method == 'OPTIONS':
         return jsonify({'status': 'ok'}), 200
     
-    # Get the path after /api
+    # Get the path - Firebase Functions handle the routing differently
     if FIREBASE_MODE:
-        path = req.path.replace('/api', '').strip('/')
+        # Firebase Functions receive the full path including /api
+        path = req.path.strip('/')
+        # Remove 'api/' prefix if present
+        if path.startswith('api/'):
+            path = path[4:]
     else:
         path = req.endpoint or 'health'  # Default for testing
+    
+    logger.info(f"Handling request to path: {path}")
     
     try:
         if path == 'status':
