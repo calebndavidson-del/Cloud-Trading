@@ -5,15 +5,14 @@
   "author": "Trading Bot Team",
   "license": "MIT",
   "dependencies": {
-    "react-scripts": "^x.y.z",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-scripts": "^5.0.1",
     "@fortawesome/fontawesome-free": "^6.4.0",
     "bootstrap": "^5.3.0",
     "chart.js": "^4.3.0",
     "chartjs-adapter-date-fns": "^3.0.0",
-    "date-fns": "^2.30.0",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-scripts": "^0.0.0"
+    "date-fns": "^2.30.0"
   },
   "devDependencies": {
     "@types/react": "^18.2.0",
