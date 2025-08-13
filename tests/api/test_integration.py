@@ -169,6 +169,8 @@ class TestAPIPerformance:
         import threading
         import queue
         
+        
+        
         results = queue.Queue()
         
         def make_request():
