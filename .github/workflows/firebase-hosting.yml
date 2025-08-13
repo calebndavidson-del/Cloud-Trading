@@ -18,11 +18,17 @@ jobs:
           node-version: '20'
 
       - name: Install dependencies
-        run: npm ci
+        run: |
+          echo "Installing frontend dependencies..."
+          npm install
+          echo "Dependencies installed successfully"
         working-directory: ./frontend
 
       - name: Build app
-        run: npm run build
+        run: |
+          echo "Building React application..."
+          npm run build
+          echo "Build completed successfully"
         working-directory: ./frontend
 
       - name: Deploy to Firebase Hosting
