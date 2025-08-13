@@ -35,10 +35,10 @@ const NavigationBar = ({
     <nav className="navbar navbar-expand-lg navbar-dark bg-dark">
       <div className="container">
         {/* Brand */}
-        <a className="navbar-brand" href="#">
+        <button type="button" className="navbar-brand btn btn-link" style={{ border: 'none', color: 'inherit', textDecoration: 'none' }}>
           <i className="fas fa-robot me-2"></i>
           Trading Bot
-        </a>
+        </button>
 
         {/* Mobile toggle */}
         <button 
@@ -159,14 +159,14 @@ const NavigationBar = ({
                   </button>
                 </li>
                 <li>
-                  <button className="dropdown-item" onClick={() => console.log('Export logs')}>
+                  <button className="dropdown-item" onClick={() => {}}>
                     <i className="fas fa-download me-2"></i>
                     Export Logs
                   </button>
                 </li>
                 <li><hr className="dropdown-divider" /></li>
                 <li>
-                  <button className="dropdown-item" onClick={() => console.log('System info')}>
+                  <button className="dropdown-item" onClick={() => {}}>
                     <i className="fas fa-info-circle me-2"></i>
                     System Info
                   </button>

@@ -9,9 +9,8 @@
  * - Best parameter discovery
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import ResultsChart from './ResultsChart';
-import ParameterForm from './ParameterForm';
 import { backendAPI } from '../api/backend';
 
 const OptimizationTab = ({ onRefresh, loading }) => {
@@ -31,36 +30,9 @@ const OptimizationTab = ({ onRefresh, loading }) => {
   const [parameterSpace, setParameterSpace] = useState({});
 
   /**
-   * Initialize component
-   */
-  useEffect(() => {
-    loadAvailableStrategies();
-  }, []);
-
-  /**
-   * Load available strategies from backend
-   */
-  const loadAvailableStrategies = async () => {
-    try {
-      const strategies = await backendAPI.getAvailableStrategies();
-      setAvailableStrategies(strategies || []);
-      
-      if (strategies && strategies.length > 0) {
-        setOptimizationConfig(prev => ({
-          ...prev,
-          strategy: strategies[0].name
-        }));
-        loadParameterSpace(strategies[0].name);
-      }
-    } catch (error) {
-      console.error('Failed to load strategies:', error);
-    }
-  };
-
-  /**
    * Load parameter space for selected strategy
    */
-  const loadParameterSpace = async (strategyName) => {
+  const loadParameterSpace = useCallback(async (strategyName) => {
     try {
       const space = await backendAPI.getStrategyParameterSpace(strategyName);
       setParameterSpace(space || {});
@@ -79,9 +51,36 @@ const OptimizationTab = ({ onRefresh, loading }) => {
         parameterRanges: defaultRanges
       }));
     } catch (error) {
-      console.error('Failed to load parameter space:', error);
+      // console.error('Failed to load parameter space:', error);
     }
-  };
+  }, []);
+
+  /**
+   * Load available strategies from backend
+   */
+  const loadAvailableStrategies = useCallback(async () => {
+    try {
+      const strategies = await backendAPI.getAvailableStrategies();
+      setAvailableStrategies(strategies || []);
+      
+      if (strategies && strategies.length > 0) {
+        setOptimizationConfig(prev => ({
+          ...prev,
+          strategy: strategies[0].name
+        }));
+        loadParameterSpace(strategies[0].name);
+      }
+    } catch (error) {
+      // console.error('Failed to load strategies:', error);
+    }
+  }, [loadParameterSpace]);
+
+  /**
+   * Initialize component
+   */
+  useEffect(() => {
+    loadAvailableStrategies();
+  }, [loadAvailableStrategies]);
 
   /**
    * Handle configuration changes
@@ -139,14 +138,14 @@ const OptimizationTab = ({ onRefresh, loading }) => {
             setProgress(100);
           }
         } catch (error) {
-          console.error('Failed to get optimization status:', error);
+          // console.error('Failed to get optimization status:', error);
           clearInterval(progressInterval);
           setIsRunning(false);
         }
       }, 3000);
 
     } catch (error) {
-      console.error('Failed to run optimization:', error);
+      // console.error('Failed to run optimization:', error);
       setIsRunning(false);
       alert('Failed to run optimization: ' + error.message);
     }
@@ -161,7 +160,7 @@ const OptimizationTab = ({ onRefresh, loading }) => {
       alert('Parameters applied successfully!');
       onRefresh();
     } catch (error) {
-      console.error('Failed to apply parameters:', error);
+      // console.error('Failed to apply parameters:', error);
       alert('Failed to apply parameters: ' + error.message);
     }
   };
