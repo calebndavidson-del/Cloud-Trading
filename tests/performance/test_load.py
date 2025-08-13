@@ -296,6 +296,7 @@ class TestMemoryUsage:
         
         import os
         
+        
         process = psutil.Process(os.getpid())
         
         # Record initial memory
