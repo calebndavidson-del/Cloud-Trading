@@ -353,7 +353,6 @@ class TestFailoverScenarios:
             # API should handle gracefully
             assert response.status_code == 200
             
-            import json
             data = json.loads(response.data)
             assert 'data' in data
             assert 'status' in data
