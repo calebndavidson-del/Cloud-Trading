@@ -157,12 +157,17 @@ class TradingBotOrchestrator:
         
         # RL Agents
         for agent_name, agent_config in models_config.get('rl_agents', {}).items():
+            # Initialize RL agent based on configuration
+            pass
+        
         # Initialize storage for predictors and RL agents
         self.predictors = {}
         self.rl_agents = {}
         
         # ML Predictors
         for predictor_name, predictor_config in models_config.get('predictors', {}).items():
+            # Initialize predictor based on configuration
+            pass
             # TODO: Implement initialization of Predictor instances based on predictor_config
             # Example: self.predictors[predictor_name] = Predictor(predictor_config)
             pass
@@ -503,27 +508,6 @@ async def main():
         },
         'learning': {
             'reward_calculation': {},
-            'model_training': {},
-            'performance_logging': {}
-        }
-    }
-    
-    # Initialize and start the orchestrator
-    orchestrator = TradingBotOrchestrator(config)
-    
-    try:
-        await orchestrator.initialize_system()
-        await orchestrator.start_trading_loop()
-    except KeyboardInterrupt:
-        print("\nShutdown requested by user")
-        await orchestrator.stop_trading_loop()
-    except Exception as e:
-        print(f"Unexpected error: {e}")
-        await orchestrator.emergency_shutdown()
-
-
-if __name__ == "__main__":
-    asyncio.run(main())ation': {},
             'model_training': {},
             'performance_logging': {}
         }
