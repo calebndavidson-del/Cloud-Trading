@@ -176,3 +176,16 @@ tmp/
 temp/
 *.tmp
 *.temp
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn/
+.pnp.*
+
+# Frontend build
+frontend/build/
+frontend/dist/
