@@ -9,7 +9,7 @@
  * - Integration with backend API
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import NavigationBar from './components/NavigationBar';
 import LiveTradingTab from './components/LiveTradingTab';
 import BacktestTab from './components/BacktestTab';
@@ -30,24 +30,34 @@ const App = () => {
   const [error, setError] = useState(null);
 
   /**
-   * Initialize application and fetch initial data
+   * Fetch current system status from backend
    */
-  useEffect(() => {
-    initializeApp();
-    
-    // Set up real-time data polling
-    const statusInterval = setInterval(fetchSystemStatus, 30000); // Every 30 seconds
-    
-    // Cleanup on unmount
-    return () => {
-      clearInterval(statusInterval);
-    };
+  const fetchSystemStatus = useCallback(async () => {
+    try {
+      const status = await backendAPI.getSystemStatus();
+      setSystemStatus({
+        isOnline: status.is_running || false,
+        portfolioValue: status.portfolio_value || 0,
+        dailyPnL: status.daily_pnl || 0,
+        activeStrategies: status.active_strategies || 0,
+        lastUpdate: new Date()
+      });
+    } catch (err) {
+      if (process.env.NODE_ENV === 'development') {
+        // console.error('Failed to fetch system status:', err);
+      }
+      setSystemStatus(prev => ({
+        ...prev,
+        isOnline: false,
+        lastUpdate: new Date()
+      }));
+    }
   }, []);
 
   /**
    * Initialize the application
    */
-  const initializeApp = async () => {
+  const initializeApp = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -65,32 +75,26 @@ const App = () => {
     } catch (err) {
       setError(err.message);
       setLoading(false);
-      console.error('App initialization error:', err);
+      if (process.env.NODE_ENV === 'development') {
+        // console.error('App initialization error:', err);
+      }
     }
-  };
+  }, [fetchSystemStatus]);
 
   /**
-   * Fetch current system status from backend
+   * Initialize application and fetch initial data
    */
-  const fetchSystemStatus = async () => {
-    try {
-      const status = await backendAPI.getSystemStatus();
-      setSystemStatus({
-        isOnline: status.is_running || false,
-        portfolioValue: status.portfolio_value || 0,
-        dailyPnL: status.daily_pnl || 0,
-        activeStrategies: status.active_strategies || 0,
-        lastUpdate: new Date()
-      });
-    } catch (err) {
-      console.error('Failed to fetch system status:', err);
-      setSystemStatus(prev => ({
-        ...prev,
-        isOnline: false,
-        lastUpdate: new Date()
-      }));
-    }
-  };
+  useEffect(() => {
+    initializeApp();
+    
+    // Set up real-time data polling
+    const statusInterval = setInterval(fetchSystemStatus, 30000); // Every 30 seconds
+    
+    // Cleanup on unmount
+    return () => {
+      clearInterval(statusInterval);
+    };
+  }, [initializeApp, fetchSystemStatus]);
 
   /**
    * Handle tab change
@@ -117,7 +121,9 @@ const App = () => {
           await backendAPI.emergencyStop();
           break;
         default:
-          console.warn('Unknown system action:', action);
+          if (process.env.NODE_ENV === 'development') {
+            // console.warn('Unknown system action:', action);
+          }
       }
       
       // Refresh system status after action
@@ -126,7 +132,7 @@ const App = () => {
     } catch (err) {
       setError(err.message);
       setLoading(false);
-      console.error('System action error:', err);
+      // console.error('System action error:', err);
     }
   };
 

@@ -63,7 +63,9 @@ class APIClient {
         const data = await response.json();
         return data;
       } catch (error) {
-        console.error(`API request attempt ${attempt} failed:`, error);
+        if (process.env.NODE_ENV === 'development') {
+          // console.error(`API request attempt ${attempt} failed:`, error);
+        }
 
         if (attempt === this.config.retryAttempts) {
           throw error;
@@ -355,7 +357,9 @@ export class RealTimeConnection {
       this.socket = new WebSocket(this.url);
       
       this.socket.onopen = () => {
-        console.log('WebSocket connected');
+        if (process.env.NODE_ENV === 'development') {
+          // console.log('WebSocket connected');
+        }
         this.reconnectAttempts = 0;
         this.emit('connected');
       };
@@ -365,22 +369,30 @@ export class RealTimeConnection {
           const data = JSON.parse(event.data);
           this.emit(data.type, data.payload);
         } catch (error) {
-          console.error('Failed to parse WebSocket message:', error);
+          if (process.env.NODE_ENV === 'development') {
+            // console.error('Failed to parse WebSocket message:', error);
+          }
         }
       };
 
       this.socket.onclose = () => {
-        console.log('WebSocket disconnected');
+        if (process.env.NODE_ENV === 'development') {
+          // console.log('WebSocket disconnected');
+        }
         this.emit('disconnected');
         this.attemptReconnect();
       };
 
       this.socket.onerror = (error) => {
-        console.error('WebSocket error:', error);
+        if (process.env.NODE_ENV === 'development') {
+          // console.error('WebSocket error:', error);
+        }
         this.emit('error', error);
       };
     } catch (error) {
-      console.error('Failed to connect WebSocket:', error);
+      if (process.env.NODE_ENV === 'development') {
+        // console.error('Failed to connect WebSocket:', error);
+      }
     }
   }
 
@@ -401,7 +413,9 @@ export class RealTimeConnection {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
       setTimeout(() => {
-        console.log(`Attempting WebSocket reconnection (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+        if (process.env.NODE_ENV === 'development') {
+          // console.log(`Attempting WebSocket reconnection (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+        }
         this.connect();
       }, this.reconnectDelay * this.reconnectAttempts);
     }
@@ -439,7 +453,9 @@ export class RealTimeConnection {
         try {
           callback(data);
         } catch (error) {
-          console.error('Error in WebSocket event callback:', error);
+          if (process.env.NODE_ENV === 'development') {
+            // console.error('Error in WebSocket event callback:', error);
+          }
         }
       });
     }
@@ -452,7 +468,9 @@ export class RealTimeConnection {
     if (this.socket && this.socket.readyState === WebSocket.OPEN) {
       this.socket.send(JSON.stringify({ type, payload }));
     } else {
-      console.warn('WebSocket not connected, message not sent');
+      if (process.env.NODE_ENV === 'development') {
+        // console.warn('WebSocket not connected, message not sent');
+      }
     }
   }
 }

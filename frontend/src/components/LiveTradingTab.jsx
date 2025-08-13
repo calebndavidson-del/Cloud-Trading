@@ -9,7 +9,7 @@
  * - Risk metrics
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import ResultsChart from './ResultsChart';
 import { backendAPI } from '../api/backend';
 
@@ -21,6 +21,27 @@ const LiveTradingTab = ({ systemStatus, onRefresh, loading }) => {
   const [riskMetrics, setRiskMetrics] = useState({});
   const [selectedTimeframe, setSelectedTimeframe] = useState('1D');
   const [autoRefresh, setAutoRefresh] = useState(true);
+
+  /**
+   * Fetch live trading data from backend
+   */
+  const fetchLiveTradingData = useCallback(async () => {
+    try {
+      const [positionsData, ordersData, performanceData, riskData] = await Promise.all([
+        backendAPI.getCurrentPositions(),
+        backendAPI.getActiveOrders(),
+        backendAPI.getPerformanceData(selectedTimeframe),
+        backendAPI.getRiskMetrics()
+      ]);
+
+      setPositions(positionsData || []);
+      setActiveOrders(ordersData || []);
+      setPerformanceData(performanceData || []);
+      setRiskMetrics(riskData || {});
+    } catch (error) {
+      // console.error('Failed to fetch live trading data:', error);
+    }
+  }, [selectedTimeframe]);
 
   /**
    * Initialize component and set up data polling
@@ -41,42 +62,7 @@ const LiveTradingTab = ({ systemStatus, onRefresh, loading }) => {
         clearInterval(refreshInterval);
       }
     };
-  }, [systemStatus.isOnline, autoRefresh]);
-
-  /**
-   * Fetch live trading data from backend
-   */
-  const fetchLiveTradingData = async () => {
-    try {
-      const [positionsData, ordersData, performanceData, riskData] = await Promise.all([
-        backendAPI.getCurrentPositions(),
-        backendAPI.getActiveOrders(),
-        backendAPI.getPerformanceData(selectedTimeframe),
-        backendAPI.getRiskMetrics()
-      ]);
-
-      setPositions(positionsData || []);
-      setActiveOrders(ordersData || []);
-      setPerformanceData(performanceData || []);
-      setRiskMetrics(riskData || {});
-    } catch (error) {
-      console.error('Failed to fetch live trading data:', error);
-    }
-  };
-
-  /**
-   * Handle manual order placement
-   */
-  const handlePlaceOrder = async (orderData) => {
-    try {
-      await backendAPI.placeOrder(orderData);
-      await fetchLiveTradingData(); // Refresh data
-      onRefresh(); // Refresh parent component
-    } catch (error) {
-      console.error('Failed to place order:', error);
-      alert('Failed to place order: ' + error.message);
-    }
-  };
+  }, [systemStatus.isOnline, autoRefresh, fetchLiveTradingData]);
 
   /**
    * Handle order cancellation
@@ -86,7 +72,7 @@ const LiveTradingTab = ({ systemStatus, onRefresh, loading }) => {
       await backendAPI.cancelOrder(orderId);
       await fetchLiveTradingData(); // Refresh data
     } catch (error) {
-      console.error('Failed to cancel order:', error);
+      // console.error('Failed to cancel order:', error);
       alert('Failed to cancel order: ' + error.message);
     }
   };
@@ -102,7 +88,7 @@ const LiveTradingTab = ({ systemStatus, onRefresh, loading }) => {
         await fetchLiveTradingData(); // Refresh data
         onRefresh(); // Refresh parent component
       } catch (error) {
-        console.error('Failed to close position:', error);
+        // console.error('Failed to close position:', error);
         alert('Failed to close position: ' + error.message);
       }
     }

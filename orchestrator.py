@@ -30,6 +30,7 @@ from features import FeatureEngineer, NLPProcessor, StateBuilder
 from models import Predictor, RLAgent, StrategyManager
 from execution import OrderExecutor, PortfolioTracker
 from learning import RewardCalculator, ModelTrainer, PerformanceLogger
+from analytics import SpreadMonitor, LiquidityPredictor, TailRiskAnalyzer
 
 
 class TradingBotOrchestrator:
@@ -431,7 +432,7 @@ class TradingBotOrchestrator:
     
     def get_system_status(self) -> Dict[str, Any]:
         """Get current system status and health metrics."""
-        return {
+        status = {
             'is_running': self.is_running,
             'is_learning_mode': self.is_learning_mode,
             'trading_universe_size': len(self.trading_universe),
@@ -443,6 +444,32 @@ class TradingBotOrchestrator:
             ) if self.portfolio_tracker else 0,
             'last_update': datetime.now().isoformat()
         }
+        
+        # Add enhanced analytics status
+        if self.spread_monitor:
+            status['spread_monitoring'] = {
+                'active': True,
+                'symbols_monitored': len(self.spread_monitor.symbols),
+                'last_update': self.spread_monitor.last_update.get('PORTFOLIO', 'Never') if self.spread_monitor.last_update else 'Never'
+            }
+        
+        if self.liquidity_predictor:
+            status['liquidity_prediction'] = {
+                'active': True,
+                'symbols_predicted': len(self.liquidity_predictor.symbols),
+                'current_predictions': len(self.liquidity_predictor.current_predictions)
+            }
+        
+        if self.tail_risk_analyzer:
+            risk_summary = self.tail_risk_analyzer.get_risk_dashboard_summary()
+            status['tail_risk_analysis'] = {
+                'active': True,
+                'risk_level': risk_summary.get('risk_level', 'unknown'),
+                'active_alerts': risk_summary.get('active_alerts', 0),
+                'last_update': self.tail_risk_analyzer.last_update.isoformat() if self.tail_risk_analyzer.last_update else 'Never'
+            }
+        
+        return status
     
     async def update_configuration(self, new_config: Dict[str, Any]) -> None:
         """Update system configuration dynamically."""
@@ -476,6 +503,27 @@ async def main():
         },
         'learning': {
             'reward_calculation': {},
+            'model_training': {},
+            'performance_logging': {}
+        }
+    }
+    
+    # Initialize and start the orchestrator
+    orchestrator = TradingBotOrchestrator(config)
+    
+    try:
+        await orchestrator.initialize_system()
+        await orchestrator.start_trading_loop()
+    except KeyboardInterrupt:
+        print("\nShutdown requested by user")
+        await orchestrator.stop_trading_loop()
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        await orchestrator.emergency_shutdown()
+
+
+if __name__ == "__main__":
+    asyncio.run(main())ation': {},
             'model_training': {},
             'performance_logging': {}
         }
