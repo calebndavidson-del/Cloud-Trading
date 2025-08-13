@@ -93,6 +93,8 @@ def handle_request(req):
             return handle_config(req)
         elif path == 'health':
             return handle_health(req)
+        elif path == 'data/autonomous-selection' or path == 'autonomous-selection':
+            return handle_autonomous_selection(req)
         else:
             return jsonify({'error': 'Endpoint not found'}), 404
             
@@ -250,6 +252,50 @@ def handle_config(req):
     }
     
     return jsonify(config), 200
+
+def handle_autonomous_selection(req):
+    """Handle autonomous stock selection requests"""
+    if not LIVE_DATA_AVAILABLE:
+        logger.error("Live data modules not available, cannot perform autonomous selection")
+        return jsonify({
+            'error': 'Autonomous selection service unavailable',
+            'message': 'Backend autonomous selection modules not accessible',
+            'status': 'error'
+        }), 503
+    
+    try:
+        # Get max_symbols parameter
+        if FIREBASE_MODE:
+            max_symbols = int(req.args.get('max_symbols', 15))
+        else:
+            max_symbols = int(getattr(req, 'args', {}).get('max_symbols', 15))
+        
+        # Import and use autonomous selection
+        from backend.market_scanner import get_autonomous_stock_selection
+        
+        logger.info(f"Performing autonomous stock selection for {max_symbols} symbols")
+        symbols = get_autonomous_stock_selection(max_stocks=max_symbols)
+        
+        if not symbols:
+            raise Exception("No symbols returned from autonomous selection")
+        
+        return jsonify({
+            'timestamp': datetime.utcnow().isoformat() + 'Z',
+            'symbols': symbols,
+            'count': len(symbols),
+            'max_requested': max_symbols,
+            'source': 'autonomous_selection',
+            'status': 'success'
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error performing autonomous selection: {e}")
+        return jsonify({
+            'error': 'Failed to perform autonomous selection',
+            'message': str(e),
+            'fallback_symbols': ['AAPL', 'MSFT', 'GOOGL'],
+            'status': 'error'
+        }), 500
 
 # For testing without Firebase
 if not FIREBASE_MODE and __name__ == "__main__":

@@ -70,5 +70,21 @@ def test_endpoints():
     except Exception as e:
         print(f"   Error: {e}")
 
+    # Test autonomous selection endpoint
+    print("\n5. Testing autonomous selection endpoint...")
+    req = MockRequest('/api/data/autonomous-selection', 'GET', args={'max_symbols': '10'})
+    try:
+        response, status_code = handle_request(req)
+        print(f"   Status: {status_code}")
+        data = response.get_json()
+        print(f"   Response keys: {list(data.keys())}")
+        if 'error' in data:
+            print(f"   Error: {data['error']}")
+        else:
+            print(f"   Symbols count: {data.get('count', 0)}")
+            print(f"   First 5 symbols: {data.get('symbols', [])[:5]}")
+    except Exception as e:
+        print(f"   Error: {e}")
+
 if __name__ == "__main__":
     test_endpoints()

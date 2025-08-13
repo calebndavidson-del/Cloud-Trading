@@ -9,7 +9,7 @@
  * - Performance metrics analysis
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import ResultsChart from './ResultsChart';
 import { backendAPI } from '../api/backend';
 
@@ -20,21 +20,56 @@ const BacktestTab = ({ onRefresh, loading }) => {
     endDate: '',
     initialCapital: 1000000,
     strategies: ['momentum', 'mean_reversion'],
-    symbols: ['AAPL', 'GOOGL', 'MSFT'],
+    symbols: [], // Start empty - will be filled by autonomous selection
+    useAutonomousSelection: true, // New setting
+    maxSymbols: 15, // Limit for autonomous selection
     benchmarkSymbol: 'SPY'
   });
   const [backtestResults, setBacktestResults] = useState(null);
   const [isRunning, setIsRunning] = useState(false);
   const [progress, setProgress] = useState(0);
   const [availableStrategies, setAvailableStrategies] = useState([]);
+  const [autonomousSymbols, setAutonomousSymbols] = useState([]);
+
+  /**
+   * Load autonomous stock selection
+   */
+  const loadAutonomousSelection = useCallback(async () => {
+    try {
+      // In a real implementation, this would call the backend's autonomous selection
+      // For now, simulate calling the market scanner
+      const response = await backendAPI.getAutonomousSelection(backtestConfig.maxSymbols);
+      setAutonomousSymbols(response.symbols || []);
+      
+      // Update config if using autonomous selection
+      if (backtestConfig.useAutonomousSelection) {
+        setBacktestConfig(prev => ({
+          ...prev,
+          symbols: response.symbols || []
+        }));
+      }
+    } catch (error) {
+      console.error('Error loading autonomous selection:', error);
+      // Fallback to minimal set
+      const fallback = ['AAPL', 'MSFT', 'GOOGL'];
+      setAutonomousSymbols(fallback);
+      if (backtestConfig.useAutonomousSelection) {
+        setBacktestConfig(prev => ({
+          ...prev,
+          symbols: fallback
+        }));
+      }
+    }
+  }, [backtestConfig.maxSymbols, backtestConfig.useAutonomousSelection]);
 
   /**
    * Initialize component
    */
   useEffect(() => {
     loadAvailableStrategies();
+    loadAutonomousSelection();
     setDefaultDates();
-  }, []);
+  }, [loadAutonomousSelection]);
 
   /**
    * Load available strategies from backend
@@ -199,17 +234,77 @@ const BacktestTab = ({ onRefresh, loading }) => {
                 </div>
               </div>
 
-              {/* Trading Universe */}
+              {/* Trading Universe Selection */}
               <div className="mb-3">
                 <label className="form-label">Trading Universe</label>
-                <textarea
-                  className="form-control"
-                  rows="3"
-                  placeholder="Enter symbols separated by commas (e.g., AAPL, GOOGL, MSFT)"
-                  value={backtestConfig.symbols.join(', ')}
-                  onChange={(e) => handleConfigChange('symbols', e.target.value.split(',').map(s => s.trim()))}
-                  disabled={isRunning}
-                />
+                
+                {/* Autonomous Selection Toggle */}
+                <div className="form-check mb-2">
+                  <input
+                    className="form-check-input"
+                    type="checkbox"
+                    id="useAutonomousSelection"
+                    checked={backtestConfig.useAutonomousSelection}
+                    onChange={(e) => {
+                      const useAutonomous = e.target.checked;
+                      setBacktestConfig(prev => ({
+                        ...prev,
+                        useAutonomousSelection: useAutonomous,
+                        symbols: useAutonomous ? autonomousSymbols : ['AAPL', 'MSFT', 'GOOGL']
+                      }));
+                    }}
+                    disabled={isRunning}
+                  />
+                  <label className="form-check-label" htmlFor="useAutonomousSelection">
+                    🤖 Use Autonomous Stock Selection
+                  </label>
+                </div>
+
+                {backtestConfig.useAutonomousSelection ? (
+                  <div>
+                    <div className="input-group mb-2">
+                      <span className="input-group-text">Max Stocks</span>
+                      <input
+                        type="number"
+                        className="form-control"
+                        value={backtestConfig.maxSymbols}
+                        onChange={(e) => handleConfigChange('maxSymbols', parseInt(e.target.value))}
+                        min="5"
+                        max="50"
+                        disabled={isRunning}
+                      />
+                      <button
+                        type="button"
+                        className="btn btn-outline-primary"
+                        onClick={loadAutonomousSelection}
+                        disabled={isRunning}
+                      >
+                        🔄 Refresh Selection
+                      </button>
+                    </div>
+                    <div className="form-control" style={{ height: '80px', overflow: 'auto', backgroundColor: '#f8f9fa' }}>
+                      <small className="text-muted">
+                        {autonomousSymbols.length > 0 ? (
+                          <>
+                            <strong>Autonomously Selected ({autonomousSymbols.length}):</strong><br/>
+                            {autonomousSymbols.join(', ')}
+                          </>
+                        ) : (
+                          'Loading autonomous selection...'
+                        )}
+                      </small>
+                    </div>
+                  </div>
+                ) : (
+                  <textarea
+                    className="form-control"
+                    rows="3"
+                    placeholder="Enter symbols separated by commas (e.g., AAPL, GOOGL, MSFT)"
+                    value={backtestConfig.symbols.join(', ')}
+                    onChange={(e) => handleConfigChange('symbols', e.target.value.split(',').map(s => s.trim()))}
+                    disabled={isRunning}
+                  />
+                )}
               </div>
 
               {/* Benchmark */}
