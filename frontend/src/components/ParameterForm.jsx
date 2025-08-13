@@ -12,7 +12,7 @@
  * - Real-time parameter updates
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 const ParameterForm = ({ 
   strategy, 
@@ -23,38 +23,6 @@ const ParameterForm = ({
   const [parameterValues, setParameterValues] = useState({});
   const [validationErrors, setValidationErrors] = useState({});
   const [parameterDefinitions, setParameterDefinitions] = useState({});
-
-  /**
-   * Initialize component with parameter definitions
-   */
-  useEffect(() => {
-    if (strategy) {
-      loadParameterDefinitions();
-    }
-  }, [strategy]);
-
-  /**
-   * Update parameter values when props change
-   */
-  useEffect(() => {
-    setParameterValues(parameters);
-  }, [parameters]);
-
-  /**
-   * Load parameter definitions for the strategy
-   */
-  const loadParameterDefinitions = () => {
-    // This would typically come from the backend API
-    const definitions = getParameterDefinitions(strategy);
-    setParameterDefinitions(definitions);
-    
-    // Initialize parameter values with defaults
-    const defaultValues = {};
-    Object.keys(definitions).forEach(param => {
-      defaultValues[param] = definitions[param].default;
-    });
-    setParameterValues(prev => ({ ...defaultValues, ...prev }));
-  };
 
   /**
    * Get parameter definitions based on strategy type
@@ -181,6 +149,38 @@ const ParameterForm = ({
 
     return definitions[strategyType] || {};
   };
+
+  /**
+   * Load parameter definitions for the strategy
+   */
+  const loadParameterDefinitions = useCallback(() => {
+    // This would typically come from the backend API
+    const definitions = getParameterDefinitions(strategy);
+    setParameterDefinitions(definitions);
+    
+    // Initialize parameter values with defaults
+    const defaultValues = {};
+    Object.keys(definitions).forEach(param => {
+      defaultValues[param] = definitions[param].default;
+    });
+    setParameterValues(prev => ({ ...defaultValues, ...prev }));
+  }, [strategy]);
+
+  /**
+   * Initialize component with parameter definitions
+   */
+  useEffect(() => {
+    if (strategy) {
+      loadParameterDefinitions();
+    }
+  }, [strategy, loadParameterDefinitions]);
+
+  /**
+   * Update parameter values when props change
+   */
+  useEffect(() => {
+    setParameterValues(parameters);
+  }, [parameters]);
 
   /**
    * Handle parameter value changes

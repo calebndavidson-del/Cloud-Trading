@@ -12,7 +12,7 @@
  * - Export functionality
  */
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useCallback } from 'react';
 
 const ResultsChart = ({ 
   data, 
@@ -26,82 +26,9 @@ const ResultsChart = ({
   const chartInstance = useRef(null);
 
   /**
-   * Initialize or update chart
-   */
-  useEffect(() => {
-    if (chartRef.current && window.Chart) {
-      // Destroy existing chart
-      if (chartInstance.current) {
-        chartInstance.current.destroy();
-      }
-
-      // Create new chart
-      const ctx = chartRef.current.getContext('2d');
-      chartInstance.current = new window.Chart(ctx, {
-        type: type,
-        data: prepareChartData(data),
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            title: {
-              display: !!title,
-              text: title,
-              font: {
-                size: 16,
-                weight: 'bold'
-              }
-            },
-            legend: {
-              display: true,
-              position: 'top'
-            },
-            tooltip: {
-              mode: 'index',
-              intersect: false,
-              backgroundColor: 'rgba(0, 0, 0, 0.8)',
-              titleColor: 'white',
-              bodyColor: 'white',
-              borderColor: '#3498db',
-              borderWidth: 1
-            }
-          },
-          scales: {
-            x: {
-              display: true,
-              grid: {
-                display: false
-              }
-            },
-            y: {
-              display: true,
-              grid: {
-                color: 'rgba(0, 0, 0, 0.1)'
-              }
-            }
-          },
-          interaction: {
-            mode: 'nearest',
-            axis: 'x',
-            intersect: false
-          },
-          ...options
-        }
-      });
-    }
-
-    // Cleanup on unmount
-    return () => {
-      if (chartInstance.current) {
-        chartInstance.current.destroy();
-      }
-    };
-  }, [data, type, title, options]);
-
-  /**
    * Prepare chart data based on input format
    */
-  const prepareChartData = (inputData) => {
+  const prepareChartData = useCallback((inputData) => {
     if (!inputData || inputData.length === 0) {
       return {
         labels: [],
@@ -181,7 +108,80 @@ const ResultsChart = ({
       labels: [],
       datasets: []
     };
-  };
+  }, [colors, type]);
+
+  /**
+   * Initialize or update chart
+   */
+  useEffect(() => {
+    if (chartRef.current && window.Chart) {
+      // Destroy existing chart
+      if (chartInstance.current) {
+        chartInstance.current.destroy();
+      }
+
+      // Create new chart
+      const ctx = chartRef.current.getContext('2d');
+      chartInstance.current = new window.Chart(ctx, {
+        type: type,
+        data: prepareChartData(data),
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            title: {
+              display: !!title,
+              text: title,
+              font: {
+                size: 16,
+                weight: 'bold'
+              }
+            },
+            legend: {
+              display: true,
+              position: 'top'
+            },
+            tooltip: {
+              mode: 'index',
+              intersect: false,
+              backgroundColor: 'rgba(0, 0, 0, 0.8)',
+              titleColor: 'white',
+              bodyColor: 'white',
+              borderColor: '#3498db',
+              borderWidth: 1
+            }
+          },
+          scales: {
+            x: {
+              display: true,
+              grid: {
+                display: false
+              }
+            },
+            y: {
+              display: true,
+              grid: {
+                color: 'rgba(0, 0, 0, 0.1)'
+              }
+            }
+          },
+          interaction: {
+            mode: 'nearest',
+            axis: 'x',
+            intersect: false
+          },
+          ...options
+        }
+      });
+    }
+
+    // Cleanup on unmount
+    return () => {
+      if (chartInstance.current) {
+        chartInstance.current.destroy();
+      }
+    };
+  }, [data, type, title, options, prepareChartData]);
 
   /**
    * Export chart as image

@@ -11,7 +11,6 @@
 
 import React, { useState, useEffect } from 'react';
 import ResultsChart from './ResultsChart';
-import ParameterForm from './ParameterForm';
 import { backendAPI } from '../api/backend';
 
 const BacktestTab = ({ onRefresh, loading }) => {
@@ -28,7 +27,6 @@ const BacktestTab = ({ onRefresh, loading }) => {
   const [isRunning, setIsRunning] = useState(false);
   const [progress, setProgress] = useState(0);
   const [availableStrategies, setAvailableStrategies] = useState([]);
-  const [selectedStrategy, setSelectedStrategy] = useState('');
 
   /**
    * Initialize component
@@ -46,7 +44,7 @@ const BacktestTab = ({ onRefresh, loading }) => {
       const strategies = await backendAPI.getAvailableStrategies();
       setAvailableStrategies(strategies || []);
     } catch (error) {
-      console.error('Failed to load strategies:', error);
+      // // console.error('Failed to load strategies:', error);
     }
   };
 
@@ -100,14 +98,14 @@ const BacktestTab = ({ onRefresh, loading }) => {
             setProgress(100);
           }
         } catch (error) {
-          console.error('Failed to get backtest status:', error);
+          // // console.error('Failed to get backtest status:', error);
           clearInterval(progressInterval);
           setIsRunning(false);
         }
       }, 2000);
 
     } catch (error) {
-      console.error('Failed to run backtest:', error);
+      // // console.error('Failed to run backtest:', error);
       setIsRunning(false);
       alert('Failed to run backtest: ' + error.message);
     }
@@ -128,7 +126,7 @@ const BacktestTab = ({ onRefresh, loading }) => {
       a.click();
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      console.error('Failed to download report:', error);
+      // // console.error('Failed to download report:', error);
       alert('Failed to download report: ' + error.message);
     }
   };
@@ -286,24 +284,6 @@ const BacktestTab = ({ onRefresh, loading }) => {
               )}
             </div>
           </div>
-
-          {/* Strategy Parameters */}
-          {selectedStrategy && (
-            <div className="card mt-3">
-              <div className="card-header">
-                <h6 className="card-title mb-0">
-                  <i className="fas fa-sliders-h me-2"></i>
-                  Strategy Parameters
-                </h6>
-              </div>
-              <div className="card-body">
-                <ParameterForm
-                  strategy={selectedStrategy}
-                  onParameterChange={(params) => console.log('Parameters changed:', params)}
-                />
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Results Panel */}
