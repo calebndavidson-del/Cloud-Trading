@@ -366,7 +366,11 @@ class PerformanceMonitor:
             memory_mb = process.memory_info().rss / 1024 / 1024
             self.metrics['memory_usage'].append(memory_mb)
         except ImportError:
-            pass  # psutil not available
+        if psutil is None:
+            return  # psutil not available
+        process = psutil.Process(os.getpid())
+        memory_mb = process.memory_info().rss / 1024 / 1024
+        self.metrics['memory_usage'].append(memory_mb)
     
     def get_summary(self) -> Dict[str, Any]:
         """Get performance summary."""
