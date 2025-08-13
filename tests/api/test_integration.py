@@ -171,6 +171,8 @@ class TestAPIPerformance:
         
         
         
+        
+        
         results = queue.Queue()
         
         def make_request():
