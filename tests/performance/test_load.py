@@ -294,7 +294,6 @@ class TestMemoryUsage:
         """Test memory usage over repeated operations."""
         from backend.data_collector import fetch_market_data
         
-        import psutil
         import os
         
         process = psutil.Process(os.getpid())
