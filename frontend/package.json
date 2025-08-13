@@ -5,6 +5,7 @@
   "author": "Trading Bot Team",
   "license": "MIT",
   "dependencies": {
+    "react-scripts": "^x.y.z",
     "@fortawesome/fontawesome-free": "^6.4.0",
     "bootstrap": "^5.3.0",
     "chart.js": "^4.3.0",
