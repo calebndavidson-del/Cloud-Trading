@@ -252,6 +252,7 @@ class TestDataGenerator:
         import random
         import math
         
+        
         prices = [base_price]
         
         for _ in range(length):
