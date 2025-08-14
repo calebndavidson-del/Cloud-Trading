@@ -19,7 +19,7 @@ DEPLOYMENT_URL = "https://cloud-trading-bot-468900.web.app"
 API_BASE_URL = f"{DEPLOYMENT_URL}/api"
 
 # Alternative direct Firebase Functions URL (fallback testing)
-FUNCTIONS_URL = "https://us-central1-cloud-trading-bot-468900.cloudfunctions.net/api"
+FUNCTIONS_URL = "https://us-west1-cloud-trading-bot-468900.cloudfunctions.net/api"
 
 def setup_network_environment():
     """Setup network environment for CI/testing environments"""
@@ -325,7 +325,7 @@ def main():
         print("- Review Firebase console logs for errors")
         print("- Ensure all required environment variables are set")
         print("- Check Firebase Functions deployment with: firebase functions:list")
-        print("- Verify Functions URL: https://us-central1-cloud-trading-bot-468900.cloudfunctions.net/api/health")
+        print("- Verify Functions URL: https://us-west1-cloud-trading-bot-468900.cloudfunctions.net/api/health")
         print()
         print("=" * 60)
         return 1

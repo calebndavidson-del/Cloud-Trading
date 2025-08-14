@@ -73,7 +73,7 @@ The Firebase hosting is configured to route `/api/**` requests to the `api` Fire
 firebase functions:list --project cloud-trading-bot-468900
 
 # Test specific function
-curl -X POST "https://us-central1-cloud-trading-bot-468900.cloudfunctions.net/api/backtest/start" \
+curl -X POST "https://us-west1-cloud-trading-bot-468900.cloudfunctions.net/api/backtest/start" \
   -H "Content-Type: application/json" \
   -d '{"symbols":["AAPL"],"initial_capital":10000}'
 ```

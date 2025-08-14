@@ -58,6 +58,7 @@ PORTFOLIO_STATE = {
 
 if FIREBASE_MODE:
     @https_fn.on_request(
+        region="us-west1",
         cors=options.CorsOptions(
             cors_origins=["*"],
             cors_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"]

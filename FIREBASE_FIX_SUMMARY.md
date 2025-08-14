@@ -113,7 +113,7 @@ python test_production_deployment.py
 If APIs still return 404 after deployment:
 1. Check workflow completed successfully in GitHub Actions
 2. Verify Functions deployed: `firebase functions:list --project cloud-trading-bot-468900`
-3. Test direct Functions: `https://us-central1-cloud-trading-bot-468900.cloudfunctions.net/api/health`
+3. Test direct Functions: `https://us-west1-cloud-trading-bot-468900.cloudfunctions.net/api/health`
 4. Check Firebase Console Functions logs for errors
 
 ## 📋 Next Steps

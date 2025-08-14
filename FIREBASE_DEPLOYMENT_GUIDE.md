@@ -10,9 +10,9 @@
 
 ### Firebase Project Details
 - **Project ID**: `cloud-trading-bot-468900`
-- **Region**: us-central1
+- **Region**: us-west1
 - **Hosting URL**: https://cloud-trading-bot-468900.web.app
-- **Functions URL**: https://us-central1-cloud-trading-bot-468900.cloudfunctions.net
+- **Functions URL**: https://us-west1-cloud-trading-bot-468900.cloudfunctions.net
 
 ## 🔧 Configuration Files
 
@@ -99,8 +99,8 @@ curl -X POST https://cloud-trading-bot-468900.web.app/api/backtest/start \
 ### Direct Functions Testing (Troubleshooting)
 ```bash
 # Test Functions directly (bypassing hosting)
-curl https://us-central1-cloud-trading-bot-468900.cloudfunctions.net/api/health
-curl https://us-central1-cloud-trading-bot-468900.cloudfunctions.net/api/status
+curl https://us-west1-cloud-trading-bot-468900.cloudfunctions.net/api/health
+curl https://us-west1-cloud-trading-bot-468900.cloudfunctions.net/api/status
 ```
 
 ## 🚨 Troubleshooting

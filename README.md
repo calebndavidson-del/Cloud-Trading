@@ -12,7 +12,7 @@ A sophisticated trading bot with modern cloud-native deployment using Firebase H
 
 ### Primary Firebase Project
 - **Project ID**: `cloud-trading-bot-468900`
-- **Region**: us-central1 (recommended for Functions)
+- **Region**: us-west1 (aligned with infrastructure)
 - **Hosting URL**: `https://cloud-trading-bot-468900.web.app`
 
 ### Migration Benefits
@@ -83,7 +83,7 @@ firebase emulators:start
 
 # The dashboard will be available at:
 # Frontend: http://localhost:5000
-# Functions: http://localhost:5001/cloud-trading-bot-468900/us-central1/api
+# Functions: http://localhost:5001/cloud-trading-bot-468900/us-west1/api
 ```
 
 ## 🔧 Configuration
