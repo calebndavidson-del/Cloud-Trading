@@ -310,13 +310,21 @@ const BacktestTab = ({ onRefresh, loading }) => {
               {/* Benchmark */}
               <div className="mb-3">
                 <label className="form-label">Benchmark Symbol</label>
-                <input
-                  type="text"
+                <select
                   className="form-control"
                   value={backtestConfig.benchmarkSymbol}
                   onChange={(e) => handleConfigChange('benchmarkSymbol', e.target.value)}
                   disabled={isRunning}
-                />
+                >
+                  <option value="SPY">SPY - S&P 500 ETF</option>
+                  <option value="QQQ">QQQ - NASDAQ 100 ETF</option>
+                  <option value="DIA">DIA - Dow Jones Industrial Average ETF</option>
+                  <option value="IWM">IWM - Russell 2000 ETF</option>
+                  <option value="VTI">VTI - Total Stock Market ETF</option>
+                  <option value="EFA">EFA - MSCI EAFE ETF</option>
+                  <option value="EEM">EEM - Emerging Markets ETF</option>
+                  <option value="TLT">TLT - 20+ Year Treasury Bond ETF</option>
+                </select>
               </div>
 
               {/* Strategies */}

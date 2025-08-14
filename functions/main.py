@@ -54,12 +54,55 @@ if FIREBASE_MODE:
         return handle_request(req)
 else:
     # Flask app for testing
+    from flask_cors import CORS
     app = Flask(__name__)
+    CORS(app)  # Enable CORS for all routes
     
     @app.route('/api/<path:endpoint>', methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
     def api_flask(endpoint):
         """Flask endpoint handler for testing"""
-        return handle_request(Request)
+        from flask import request
+        return handle_request_flask(request, endpoint)
+
+def handle_request_flask(req, endpoint):
+    """Handle Flask API requests"""
+    
+    # Handle CORS preflight
+    if req.method == 'OPTIONS':
+        return jsonify({'status': 'ok'}), 200
+    
+    path = endpoint
+    logger.info(f"Handling Flask request to path: {path}")
+    
+    try:
+        if path == 'status':
+            return handle_status(req)
+        elif path == 'market-data':
+            return handle_market_data(req)
+        elif path == 'market-trends':
+            return handle_market_trends(req)
+        elif path == 'update-equity':
+            return handle_update_equity(req)
+        elif path == 'config':
+            return handle_config(req)
+        elif path == 'health':
+            return handle_health(req)
+        elif path == 'data/autonomous-selection' or path == 'autonomous-selection':
+            return handle_autonomous_selection(req)
+        elif path.startswith('backtest/'):
+            return handle_backtest_endpoints(req, path)
+        elif path.startswith('optimization/'):
+            return handle_optimization_endpoints(req, path)
+        elif path.startswith('trading/'):
+            return handle_trading_endpoints(req, path)
+        elif path.startswith('system/'):
+            return handle_system_endpoints(req, path)
+        else:
+            return jsonify({'error': 'Endpoint not found'}), 404
+            
+    except Exception as e:
+        logger.error(f"Error handling request to {path}: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
 
 def handle_request(req):
     """Handle API requests (works for both Firebase and Flask)"""
@@ -95,6 +138,14 @@ def handle_request(req):
             return handle_health(req)
         elif path == 'data/autonomous-selection' or path == 'autonomous-selection':
             return handle_autonomous_selection(req)
+        elif path.startswith('backtest/'):
+            return handle_backtest_endpoints(req, path)
+        elif path.startswith('optimization/'):
+            return handle_optimization_endpoints(req, path)
+        elif path.startswith('trading/'):
+            return handle_trading_endpoints(req, path)
+        elif path.startswith('system/'):
+            return handle_system_endpoints(req, path)
         else:
             return jsonify({'error': 'Endpoint not found'}), 404
             
@@ -248,7 +299,17 @@ def handle_config(req):
         'portfolio': {
             'equity': PORTFOLIO_STATE['equity'],
             'last_updated': PORTFOLIO_STATE['last_updated']
-        }
+        },
+        'benchmarks': [
+            {'symbol': 'SPY', 'name': 'S&P 500 ETF', 'description': 'Large-cap US stocks'},
+            {'symbol': 'QQQ', 'name': 'NASDAQ 100 ETF', 'description': 'Technology-heavy index'},
+            {'symbol': 'DIA', 'name': 'Dow Jones Industrial Average ETF', 'description': '30 large US companies'},
+            {'symbol': 'IWM', 'name': 'Russell 2000 ETF', 'description': 'Small-cap US stocks'},
+            {'symbol': 'VTI', 'name': 'Total Stock Market ETF', 'description': 'Entire US stock market'},
+            {'symbol': 'EFA', 'name': 'MSCI EAFE ETF', 'description': 'Developed international markets'},
+            {'symbol': 'EEM', 'name': 'Emerging Markets ETF', 'description': 'Emerging market stocks'},
+            {'symbol': 'TLT', 'name': '20+ Year Treasury Bond ETF', 'description': 'Long-term government bonds'}
+        ]
     }
     
     return jsonify(config), 200
@@ -296,6 +357,404 @@ def handle_autonomous_selection(req):
             'fallback_symbols': ['AAPL', 'MSFT', 'GOOGL'],
             'status': 'error'
         }), 500
+
+# Global storage for jobs (in production, this would be in a database)
+JOBS = {}
+job_counter = 0
+
+def handle_backtest_endpoints(req, path):
+    """Handle backtest-related endpoints"""
+    global job_counter
+    
+    # Remove 'backtest/' prefix
+    endpoint = path[9:]  # Remove 'backtest/'
+    
+    if endpoint == 'start':
+        if req.method != 'POST':
+            return jsonify({'error': 'Method not allowed'}), 405
+            
+        try:
+            # Get backtest configuration
+            if FIREBASE_MODE:
+                config = req.get_json() or {}
+            else:
+                config = getattr(req, 'json', {}) or {}
+            
+            # Generate job ID
+            job_counter += 1
+            job_id = f"backtest_{job_counter}"
+            
+            # Store job info
+            JOBS[job_id] = {
+                'type': 'backtest',
+                'status': 'running',
+                'config': config,
+                'start_time': datetime.utcnow().isoformat(),
+                'progress': 0
+            }
+            
+            # Start backtest in background (simulate)
+            # In a real implementation, this would be handled by a task queue
+            import threading
+            thread = threading.Thread(target=run_backtest_job, args=(job_id, config))
+            thread.daemon = True
+            thread.start()
+            
+            return jsonify({
+                'job_id': job_id,
+                'status': 'started',
+                'message': 'Backtest started successfully'
+            }), 200
+            
+        except Exception as e:
+            logger.error(f"Error starting backtest: {e}")
+            return jsonify({'error': 'Failed to start backtest', 'message': str(e)}), 500
+    
+    elif endpoint.startswith('status/'):
+        job_id = endpoint[7:]  # Remove 'status/'
+        
+        if job_id not in JOBS:
+            return jsonify({'error': 'Job not found'}), 404
+        
+        job = JOBS[job_id]
+        return jsonify({
+            'job_id': job_id,
+            'status': job['status'],
+            'progress': job['progress'],
+            'start_time': job['start_time'],
+            'end_time': job.get('end_time'),
+            'message': job.get('message', '')
+        }), 200
+    
+    elif endpoint.startswith('results/'):
+        job_id = endpoint[8:]  # Remove 'results/'
+        
+        if job_id not in JOBS:
+            return jsonify({'error': 'Job not found'}), 404
+            
+        job = JOBS[job_id]
+        if job['status'] != 'completed':
+            return jsonify({'error': 'Backtest not completed yet'}), 400
+            
+        return jsonify({
+            'job_id': job_id,
+            'results': job.get('results', {}),
+            'summary': job.get('summary', {}),
+            'trades': job.get('trades', []),
+            'metrics': job.get('metrics', {})
+        }), 200
+    
+    else:
+        return jsonify({'error': 'Backtest endpoint not found'}), 404
+
+def handle_optimization_endpoints(req, path):
+    """Handle optimization-related endpoints"""
+    global job_counter
+    
+    # Remove 'optimization/' prefix  
+    endpoint = path[13:]  # Remove 'optimization/'
+    
+    if endpoint == 'start':
+        if req.method != 'POST':
+            return jsonify({'error': 'Method not allowed'}), 405
+            
+        try:
+            # Get optimization configuration
+            if FIREBASE_MODE:
+                config = req.get_json() or {}
+            else:
+                config = getattr(req, 'json', {}) or {}
+            
+            # Generate job ID
+            job_counter += 1
+            job_id = f"optimization_{job_counter}"
+            
+            # Store job info
+            JOBS[job_id] = {
+                'type': 'optimization',
+                'status': 'running',
+                'config': config,
+                'start_time': datetime.utcnow().isoformat(),
+                'progress': 0
+            }
+            
+            # Start optimization in background (simulate)
+            import threading
+            thread = threading.Thread(target=run_optimization_job, args=(job_id, config))
+            thread.daemon = True
+            thread.start()
+            
+            return jsonify({
+                'job_id': job_id,
+                'status': 'started',
+                'message': 'Optimization started successfully'
+            }), 200
+            
+        except Exception as e:
+            logger.error(f"Error starting optimization: {e}")
+            return jsonify({'error': 'Failed to start optimization', 'message': str(e)}), 500
+    
+    elif endpoint.startswith('status/'):
+        job_id = endpoint[7:]  # Remove 'status/'
+        
+        if job_id not in JOBS:
+            return jsonify({'error': 'Job not found'}), 404
+        
+        job = JOBS[job_id]
+        return jsonify({
+            'job_id': job_id,
+            'status': job['status'],
+            'progress': job['progress'],
+            'start_time': job['start_time'],
+            'end_time': job.get('end_time'),
+            'message': job.get('message', '')
+        }), 200
+    
+    elif endpoint.startswith('results/'):
+        job_id = endpoint[8:]  # Remove 'results/'
+        
+        if job_id not in JOBS:
+            return jsonify({'error': 'Job not found'}), 404
+            
+        job = JOBS[job_id]
+        if job['status'] != 'completed':
+            return jsonify({'error': 'Optimization not completed yet'}), 400
+            
+        return jsonify({
+            'job_id': job_id,
+            'results': job.get('results', {}),
+            'best_parameters': job.get('best_parameters', {}),
+            'performance': job.get('performance', {})
+        }), 200
+    
+    else:
+        return jsonify({'error': 'Optimization endpoint not found'}), 404
+
+def handle_trading_endpoints(req, path):
+    """Handle trading-related endpoints"""
+    # Remove 'trading/' prefix
+    endpoint = path[8:]  # Remove 'trading/'
+    
+    if endpoint == 'positions':
+        return jsonify({
+            'positions': [
+                {'symbol': 'AAPL', 'shares': 100, 'current_price': 150.0, 'market_value': 15000.0, 'pnl': 500.0},
+                {'symbol': 'GOOGL', 'shares': 50, 'current_price': 2800.0, 'market_value': 140000.0, 'pnl': -2000.0}
+            ],
+            'total_value': 155000.0,
+            'cash': 10000.0
+        }), 200
+    
+    elif endpoint == 'orders/active':
+        return jsonify({
+            'orders': [
+                {'id': '001', 'symbol': 'MSFT', 'side': 'buy', 'quantity': 75, 'price': 420.0, 'status': 'pending'},
+                {'id': '002', 'symbol': 'TSLA', 'side': 'sell', 'quantity': 25, 'price': 220.0, 'status': 'pending'}
+            ]
+        }), 200
+    
+    elif endpoint == 'performance':
+        timeframe = req.args.get('timeframe', '1D') if FIREBASE_MODE else getattr(req, 'args', {}).get('timeframe', '1D')
+        return jsonify({
+            'timeframe': timeframe,
+            'total_return': 0.085,  # 8.5%
+            'daily_pnl': 1250.0,
+            'sharpe_ratio': 1.45,
+            'max_drawdown': -0.12,
+            'win_rate': 0.67
+        }), 200
+    
+    elif endpoint == 'risk-metrics':
+        return jsonify({
+            'var_95': -2500.0,  # Value at Risk
+            'expected_shortfall': -3200.0,
+            'beta': 1.15,
+            'volatility': 0.18,
+            'correlation_spy': 0.85
+        }), 200
+    
+    else:
+        return jsonify({'error': 'Trading endpoint not found'}), 404
+
+def run_backtest_job(job_id, config):
+    """Run backtest job in background"""
+    try:
+        import time
+        from backend.paper_trader import PaperTrader
+        
+        # Update job status
+        JOBS[job_id]['status'] = 'running'
+        JOBS[job_id]['message'] = 'Initializing backtest...'
+        
+        # Get configuration
+        start_date = config.get('startDate', '2023-01-01')
+        end_date = config.get('endDate', '2023-12-31')
+        initial_capital = config.get('initialCapital', 100000)
+        symbols = config.get('symbols', ['AAPL', 'GOOGL', 'MSFT'])
+        benchmark = config.get('benchmarkSymbol', 'SPY')
+        
+        # Use autonomous selection if enabled
+        if config.get('useAutonomousSelection', False):
+            try:
+                from backend.market_scanner import get_autonomous_stock_selection
+                max_symbols = config.get('maxSymbols', 15)
+                autonomous_symbols = get_autonomous_stock_selection(max_stocks=max_symbols)
+                if autonomous_symbols:
+                    symbols = autonomous_symbols
+                    logger.info(f"Using autonomous selection: {symbols}")
+            except Exception as e:
+                logger.warning(f"Autonomous selection failed, using default symbols: {e}")
+        
+        # Simulate backtest progress
+        JOBS[job_id]['progress'] = 10
+        JOBS[job_id]['message'] = 'Fetching historical data...'
+        time.sleep(1)  # Simulate work
+        
+        JOBS[job_id]['progress'] = 30
+        JOBS[job_id]['message'] = 'Running trading simulation...'
+        
+        # Initialize paper trader
+        trader = PaperTrader(initial_capital)
+        
+        # Simulate some trades
+        for i, symbol in enumerate(symbols[:5]):  # Limit to 5 symbols for demo
+            try:
+                # Simulate buying
+                shares = max(1, int(initial_capital * 0.1 / 100))  # 10% allocation, assuming $100 price
+                trader.buy(symbol, shares, 100.0 + i * 10)  # Simulate different prices
+                
+                # Simulate selling later
+                trader.sell(symbol, shares // 2, 110.0 + i * 10)  # Partial sell at higher price
+                
+                JOBS[job_id]['progress'] = 30 + (i + 1) * 10
+                time.sleep(0.5)  # Simulate processing time
+            except Exception as e:
+                logger.warning(f"Error simulating trade for {symbol}: {e}")
+        
+        JOBS[job_id]['progress'] = 80
+        JOBS[job_id]['message'] = 'Calculating metrics...'
+        
+        # Get final summary
+        summary = trader.get_summary()
+        
+        # Simulate benchmark comparison
+        benchmark_return = 0.12  # 12% return for benchmark
+        portfolio_return = summary['return_percentage'] / 100
+        alpha = portfolio_return - benchmark_return
+        
+        # Store results
+        JOBS[job_id]['results'] = summary
+        JOBS[job_id]['trades'] = trader.trades
+        JOBS[job_id]['metrics'] = {
+            'total_return': summary['return_percentage'],
+            'benchmark_return': benchmark_return * 100,
+            'alpha': alpha * 100,
+            'sharpe_ratio': 1.2,  # Simulated
+            'max_drawdown': -8.5,  # Simulated
+            'volatility': 15.2  # Simulated
+        }
+        JOBS[job_id]['summary'] = {
+            'symbols_traded': symbols,
+            'benchmark_symbol': benchmark,
+            'period': f"{start_date} to {end_date}",
+            'total_trades': len(trader.trades)
+        }
+        
+        JOBS[job_id]['progress'] = 100
+        JOBS[job_id]['status'] = 'completed'
+        JOBS[job_id]['end_time'] = datetime.utcnow().isoformat()
+        JOBS[job_id]['message'] = 'Backtest completed successfully'
+        
+        logger.info(f"Backtest {job_id} completed successfully")
+        
+    except Exception as e:
+        logger.error(f"Error in backtest job {job_id}: {e}")
+        JOBS[job_id]['status'] = 'failed'
+        JOBS[job_id]['end_time'] = datetime.utcnow().isoformat()
+        JOBS[job_id]['message'] = f'Backtest failed: {str(e)}'
+
+def run_optimization_job(job_id, config):
+    """Run optimization job in background"""
+    try:
+        import time
+        
+        # Update job status
+        JOBS[job_id]['status'] = 'running'
+        JOBS[job_id]['message'] = 'Starting parameter optimization...'
+        
+        # Simulate optimization progress
+        for i in range(10):
+            JOBS[job_id]['progress'] = (i + 1) * 10
+            JOBS[job_id]['message'] = f'Testing parameter set {i + 1}/10...'
+            time.sleep(0.5)  # Simulate optimization work
+        
+        # Store optimization results
+        JOBS[job_id]['results'] = {
+            'best_score': 0.245,  # Best Sharpe ratio found
+            'trials_completed': 100,
+            'optimization_time': 45.2
+        }
+        JOBS[job_id]['best_parameters'] = {
+            'momentum_window': 14,
+            'mean_reversion_window': 20,
+            'stop_loss': 0.05,
+            'take_profit': 0.15
+        }
+        JOBS[job_id]['performance'] = {
+            'sharpe_ratio': 0.245,
+            'total_return': 0.18,
+            'max_drawdown': -0.08,
+            'win_rate': 0.65
+        }
+        
+        JOBS[job_id]['progress'] = 100
+        JOBS[job_id]['status'] = 'completed'
+        JOBS[job_id]['end_time'] = datetime.utcnow().isoformat()
+        JOBS[job_id]['message'] = 'Optimization completed successfully'
+        
+        logger.info(f"Optimization {job_id} completed successfully")
+        
+    except Exception as e:
+        logger.error(f"Error in optimization job {job_id}: {e}")
+        JOBS[job_id]['status'] = 'failed'
+        JOBS[job_id]['end_time'] = datetime.utcnow().isoformat()
+        JOBS[job_id]['message'] = f'Optimization failed: {str(e)}'
+
+def handle_system_endpoints(req, path):
+    """Handle system-related endpoints"""
+    # Remove 'system/' prefix
+    endpoint = path[7:]  # Remove 'system/'
+    
+    if endpoint == 'status':
+        return handle_status(req)
+    elif endpoint == 'start':
+        return handle_system_start(req)
+    elif endpoint == 'stop':
+        return handle_system_stop(req)
+    else:
+        return jsonify({'error': 'System endpoint not found'}), 404
+
+def handle_system_start(req):
+    """Handle system start request"""
+    if req.method != 'POST':
+        return jsonify({'error': 'Method not allowed'}), 405
+    
+    return jsonify({
+        'status': 'success',
+        'message': 'Trading system started',
+        'timestamp': datetime.utcnow().isoformat() + 'Z'
+    }), 200
+
+def handle_system_stop(req):
+    """Handle system stop request"""
+    if req.method != 'POST':
+        return jsonify({'error': 'Method not allowed'}), 405
+    
+    return jsonify({
+        'status': 'success', 
+        'message': 'Trading system stopped',
+        'timestamp': datetime.utcnow().isoformat() + 'Z'
+    }), 200
 
 # For testing without Firebase
 if not FIREBASE_MODE and __name__ == "__main__":
