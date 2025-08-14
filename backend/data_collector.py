@@ -30,10 +30,10 @@ def fetch_market_data(symbols: list = None, use_mock: bool = None) -> Dict[str, 
         Exception: If live data cannot be fetched or if mock data is requested
     """
     if symbols is None:
-        # Use autonomous stock selection
+        # Use autonomous stock selection with indices included
         from backend.market_scanner import get_autonomous_stock_selection
-        symbols = get_autonomous_stock_selection(max_stocks=10)
-        logger.info(f"Using autonomous stock selection: {symbols}")
+        symbols = get_autonomous_stock_selection(max_stocks=10, include_indices=True)
+        logger.info(f"Using autonomous stock selection with indices: {symbols}")
     
     # ENFORCE LIVE-ONLY MODE - No mock data allowed
     if use_mock is True:

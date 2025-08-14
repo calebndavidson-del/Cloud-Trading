@@ -15,11 +15,25 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Try to import Firebase Functions, fall back to Flask for testing
 try:
     from firebase_functions import https_fn, options
-    from flask import Request, jsonify
+    from flask import Request, jsonify as flask_jsonify
     FIREBASE_MODE = True
+    
+    # Use Flask jsonify in Firebase mode
+    def jsonify(data):
+        import json
+        return json.dumps(data), {'Content-Type': 'application/json'}
+        
 except ImportError:
-    from flask import Flask, request as Request, jsonify
+    from flask import Flask, request as Request, jsonify as flask_jsonify
     FIREBASE_MODE = False
+    
+    # Create a custom jsonify that works outside app context
+    def jsonify(data):
+        import json
+        class Response:
+            def __init__(self, data_str):
+                self.data = json.loads(data_str)
+        return Response(json.dumps(data))
 
 # Import backend modules for live data
 try:
@@ -97,6 +111,10 @@ def handle_request_flask(req, endpoint):
             return handle_trading_endpoints(req, path)
         elif path.startswith('system/'):
             return handle_system_endpoints(req, path)
+        elif path.startswith('strategies/') or path == 'strategies':
+            return handle_strategy_endpoints(req, path)
+        elif path.startswith('data/') and path != 'data/autonomous-selection':
+            return handle_data_endpoints(req, path)
         else:
             return jsonify({'error': 'Endpoint not found'}), 404
             
@@ -146,6 +164,10 @@ def handle_request(req):
             return handle_trading_endpoints(req, path)
         elif path.startswith('system/'):
             return handle_system_endpoints(req, path)
+        elif path.startswith('strategies/') or path == 'strategies':
+            return handle_strategy_endpoints(req, path)
+        elif path.startswith('data/') and path != 'data/autonomous-selection':
+            return handle_data_endpoints(req, path)
         else:
             return jsonify({'error': 'Endpoint not found'}), 404
             
@@ -196,8 +218,11 @@ def handle_market_data(req):
         }), 503
     
     try:
-        # Use live data fetcher - this is synchronous but may need async wrapper
-        live_data = asyncio.run(fetch_market_data(symbols))
+        # Use live data fetcher - handle both sync and async results
+        if asyncio.iscoroutinefunction(fetch_market_data):
+            live_data = asyncio.run(fetch_market_data(symbols))
+        else:
+            live_data = fetch_market_data(symbols)
         
         if not live_data or not live_data.get('data'):
             raise Exception("No live data returned")
@@ -359,8 +384,57 @@ def handle_autonomous_selection(req):
         }), 500
 
 # Global storage for jobs (in production, this would be in a database)
-JOBS = {}
-job_counter = 0
+JOBS = {
+    'test123': {
+        'type': 'backtest',
+        'status': 'completed',
+        'progress': 100,
+        'start_time': '2025-08-14T12:00:00Z',
+        'end_time': '2025-08-14T12:30:00Z',
+        'message': 'Backtest completed successfully',
+        'results': {
+            'total_return': 0.15,
+            'sharpe_ratio': 1.8,
+            'max_drawdown': -0.08,
+            'trades': 25
+        },
+        'summary': {
+            'initial_capital': 100000,
+            'final_value': 115000,
+            'total_trades': 25,
+            'win_rate': 0.68
+        },
+        'trades': [],
+        'metrics': {
+            'volatility': 0.12,
+            'beta': 1.05
+        }
+    },
+    'optimization_1': {
+        'type': 'optimization',
+        'status': 'completed',
+        'progress': 100,
+        'start_time': '2025-08-14T13:00:00Z',
+        'end_time': '2025-08-14T13:45:00Z',
+        'message': 'Optimization completed successfully',
+        'results': {
+            'best_sharpe': 2.1,
+            'best_return': 0.22,
+            'trials_completed': 100
+        },
+        'best_parameters': {
+            'sma_short': 10,
+            'sma_long': 30,
+            'risk_threshold': 0.02
+        },
+        'performance': {
+            'sharpe_ratio': 2.1,
+            'total_return': 0.22,
+            'max_drawdown': -0.06
+        }
+    }
+}
+job_counter = 2
 
 def handle_backtest_endpoints(req, path):
     """Handle backtest-related endpoints"""
@@ -545,7 +619,7 @@ def handle_trading_endpoints(req, path):
             'cash': 10000.0
         }), 200
     
-    elif endpoint == 'orders/active':
+    elif endpoint == 'orders/active' or endpoint == 'orders':
         return jsonify({
             'orders': [
                 {'id': '001', 'symbol': 'MSFT', 'side': 'buy', 'quantity': 75, 'price': 420.0, 'status': 'pending'},
@@ -755,6 +829,227 @@ def handle_system_stop(req):
         'message': 'Trading system stopped',
         'timestamp': datetime.utcnow().isoformat() + 'Z'
     }), 200
+
+def handle_strategy_endpoints(req, path):
+    """Handle strategy-related endpoints"""
+    # Remove 'strategies/' prefix, handle both 'strategies' and 'strategies/'
+    if path == 'strategies':
+        endpoint = ''
+    elif path.startswith('strategies/'):
+        endpoint = path[11:]  # Remove 'strategies/'
+    else:
+        endpoint = 'list'
+    
+    if endpoint == '' or endpoint == 'list':
+        return handle_get_strategies(req)
+    elif endpoint == 'available':
+        return handle_get_strategies(req)
+    elif endpoint == 'parameters':
+        return handle_get_strategy_parameters(req)
+    elif endpoint.startswith('parameters/'):
+        strategy_name = endpoint[11:]  # Remove 'parameters/'
+        return handle_get_strategy_parameters(req, strategy_name)
+    else:
+        return jsonify({'error': 'Strategy endpoint not found'}), 404
+
+def handle_get_strategies(req):
+    """Get available trading strategies"""
+    try:
+        # Import and get available strategies
+        from backend.optimization.parameter_space import get_parameter_space
+        param_space = get_parameter_space()
+        
+        # Get strategy categories and available strategies
+        strategies = [
+            {
+                'name': 'momentum_strategy',
+                'description': 'Momentum-based trading using technical indicators',
+                'parameters': ['sma_periods', 'rsi_threshold', 'momentum_window'],
+                'category': 'technical'
+            },
+            {
+                'name': 'mean_reversion_strategy', 
+                'description': 'Mean reversion strategy using statistical analysis',
+                'parameters': ['lookback_period', 'zscore_threshold', 'exit_threshold'],
+                'category': 'statistical'
+            },
+            {
+                'name': 'ml_strategy',
+                'description': 'Machine learning-based predictions',
+                'parameters': ['hidden_layers', 'learning_rate', 'feature_window'],
+                'category': 'ml'
+            },
+            {
+                'name': 'risk_parity_strategy',
+                'description': 'Risk-based portfolio allocation',
+                'parameters': ['rebalance_frequency', 'volatility_window', 'max_weight'],
+                'category': 'portfolio'
+            }
+        ]
+        
+        return jsonify({
+            'strategies': strategies,
+            'total_count': len(strategies),
+            'categories': ['technical', 'statistical', 'ml', 'portfolio'],
+            'timestamp': datetime.utcnow().isoformat() + 'Z'
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error getting strategies: {e}")
+        return jsonify({
+            'error': 'Failed to get strategies',
+            'message': str(e),
+            'strategies': []
+        }), 500
+
+def handle_get_strategy_parameters(req, strategy_name=None):
+    """Get strategy parameters"""
+    try:
+        from backend.optimization.parameter_space import get_parameter_space, get_all_parameters, get_strategy_parameters
+        
+        def serialize_parameter_def(param_def):
+            """Convert ParameterDefinition to serializable dict"""
+            return {
+                'name': param_def.name,
+                'type': param_def.param_type.value if hasattr(param_def.param_type, 'value') else str(param_def.param_type),
+                'bounds': param_def.bounds,
+                'default': param_def.default,
+                'description': param_def.description
+            }
+        
+        def serialize_parameters(params_dict):
+            """Convert parameter space to serializable format"""
+            serialized = {}
+            for category, param_dict in params_dict.items():
+                serialized[category] = {}
+                for param_name, param_def in param_dict.items():
+                    serialized[category][param_name] = serialize_parameter_def(param_def)
+            return serialized
+        
+        if strategy_name:
+            # Get parameters for specific strategy
+            strategy_params = get_strategy_parameters(strategy_name)
+            serialized_params = {}
+            for param_name, param_def in strategy_params.items():
+                serialized_params[param_name] = serialize_parameter_def(param_def)
+            
+            return jsonify({
+                'strategy': strategy_name,
+                'parameters': serialized_params,
+                'timestamp': datetime.utcnow().isoformat() + 'Z'
+            }), 200
+        else:
+            # Get all parameter categories
+            all_params = get_all_parameters()
+            serialized_params = serialize_parameters(all_params)
+            
+            return jsonify({
+                'parameter_categories': list(all_params.keys()),
+                'parameters': serialized_params,
+                'timestamp': datetime.utcnow().isoformat() + 'Z'
+            }), 200
+            
+    except Exception as e:
+        logger.error(f"Error getting strategy parameters: {e}")
+        return jsonify({
+            'error': 'Failed to get strategy parameters',
+            'message': str(e),
+            'parameters': {}
+        }), 500
+
+def handle_data_endpoints(req, path):
+    """Handle data-related endpoints"""
+    # Remove 'data/' prefix
+    endpoint = path[5:]  # Remove 'data/'
+    
+    if endpoint == 'market':
+        return handle_market_data(req)
+    elif endpoint == 'news':
+        return handle_news_data(req)
+    elif endpoint == 'earnings':
+        return handle_earnings_data(req)
+    elif endpoint.startswith('autonomous-selection'):
+        return handle_autonomous_selection(req)
+    else:
+        return jsonify({'error': 'Data endpoint not found'}), 404
+
+def handle_news_data(req):
+    """Get news data for symbols"""
+    if FIREBASE_MODE:
+        symbols = req.args.get('symbols', '').split(',')
+        limit = int(req.args.get('limit', 50))
+    else:
+        symbols = getattr(req, 'args', {}).get('symbols', '').split(',')
+        limit = int(getattr(req, 'args', {}).get('limit', 50))
+    
+    symbols = [s.strip() for s in symbols if s.strip()]
+    
+    try:
+        # Mock news data for now - in production this would fetch real news
+        news_data = []
+        for symbol in symbols[:5]:  # Limit to 5 symbols
+            for i in range(min(limit // len(symbols), 10)):
+                news_data.append({
+                    'symbol': symbol,
+                    'headline': f'Breaking: {symbol} reports strong earnings growth',
+                    'summary': f'Analysis shows positive momentum for {symbol} stock',
+                    'source': 'Financial News',
+                    'published_at': (datetime.utcnow() - timedelta(hours=i)).isoformat() + 'Z',
+                    'sentiment': 'positive' if i % 2 == 0 else 'neutral',
+                    'relevance_score': 0.8 - (i * 0.1)
+                })
+        
+        return jsonify({
+            'news': news_data,
+            'symbols': symbols,
+            'total_count': len(news_data),
+            'timestamp': datetime.utcnow().isoformat() + 'Z'
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error getting news data: {e}")
+        return jsonify({
+            'error': 'Failed to get news data',
+            'message': str(e),
+            'news': []
+        }), 500
+
+def handle_earnings_data(req):
+    """Get earnings data for symbols"""
+    if FIREBASE_MODE:
+        symbols = req.args.get('symbols', '').split(',')
+    else:
+        symbols = getattr(req, 'args', {}).get('symbols', '').split(',')
+    
+    symbols = [s.strip() for s in symbols if s.strip()]
+    
+    try:
+        # Mock earnings data - in production this would fetch real earnings
+        earnings_data = {}
+        for symbol in symbols:
+            earnings_data[symbol] = {
+                'next_earnings_date': (datetime.utcnow() + timedelta(days=30)).strftime('%Y-%m-%d'),
+                'last_earnings_date': (datetime.utcnow() - timedelta(days=90)).strftime('%Y-%m-%d'),
+                'eps_estimate': 1.25,
+                'eps_actual': 1.32,
+                'revenue_estimate': 50000000000,
+                'revenue_actual': 52000000000,
+                'surprise_percent': 5.6
+            }
+        
+        return jsonify({
+            'earnings': earnings_data,
+            'symbols': symbols,
+            'timestamp': datetime.utcnow().isoformat() + 'Z'
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error getting earnings data: {e}")
+        return jsonify({
+            'error': 'Failed to get earnings data',
+            'message': str(e),
+            'earnings': {}
+        }), 500
 
 # For testing without Firebase
 if not FIREBASE_MODE and __name__ == "__main__":
