@@ -784,25 +784,69 @@ def get_parameter_space() -> TradingParameterSpace:
 def get_available_strategies():
     """Get list of available trading strategies"""
     return [
-        'momentum_strategy',
-        'mean_reversion_strategy', 
-        'ml_strategy',
-        'risk_parity_strategy'
+        {
+            'name': 'momentum_strategy',
+            'displayName': 'Momentum Strategy',
+            'description': 'Trend-following strategy using momentum indicators'
+        },
+        {
+            'name': 'mean_reversion_strategy',
+            'displayName': 'Mean Reversion Strategy',
+            'description': 'Strategy that profits from price reversions to the mean'
+        },
+        {
+            'name': 'ml_strategy',
+            'displayName': 'Machine Learning Strategy',
+            'description': 'AI-powered strategy using machine learning models'
+        },
+        {
+            'name': 'risk_parity_strategy',
+            'displayName': 'Risk Parity Strategy',
+            'description': 'Portfolio allocation based on risk contribution'
+        }
     ]
 
-def get_strategy_parameters(strategy_name: str):
-    """Get parameters for a specific strategy"""
+def get_strategy_parameter_space(strategy_name: str):
+    """Get parameter space for a specific strategy"""
     param_space = get_parameter_space()
     
     strategy_mappings = {
         'momentum_strategy': ['technical_indicators', 'strategy'],
         'mean_reversion_strategy': ['strategy', 'risk_management'], 
         'ml_strategy': ['rl_ml', 'feature_engineering'],
-        'risk_parity_strategy': ['risk_management', 'portfolio_optimization']
+        'risk_parity_strategy': ['risk_management']
     }
     
     categories = strategy_mappings.get(strategy_name, ['strategy'])
-    return param_space.get_parameter_space(categories)
+    space = param_space.get_parameter_space(categories)
+    
+    # Convert to simple format for frontend
+    simple_space = {}
+    for param_name, param_def in space.items():
+        if param_def.param_type in [ParameterType.FLOAT, ParameterType.INTEGER]:
+            simple_space[param_name] = {
+                'min': param_def.bounds[0],
+                'max': param_def.bounds[1],
+                'default': param_def.default,
+                'type': param_def.param_type.value,
+                'description': param_def.description,
+                'step': param_def.step
+            }
+        elif param_def.param_type == ParameterType.CATEGORICAL:
+            simple_space[param_name] = {
+                'options': param_def.bounds,
+                'default': param_def.default,
+                'type': param_def.param_type.value,
+                'description': param_def.description
+            }
+        elif param_def.param_type == ParameterType.BOOLEAN:
+            simple_space[param_name] = {
+                'default': param_def.default,
+                'type': param_def.param_type.value,
+                'description': param_def.description
+            }
+    
+    return simple_space
 
 def get_all_parameters():
     """Get all parameter categories and their parameters"""
