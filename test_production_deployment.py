@@ -324,6 +324,8 @@ def main():
         
         print("- Review Firebase console logs for errors")
         print("- Ensure all required environment variables are set")
+        print("- Check Firebase Functions deployment with: firebase functions:list")
+        print("- Verify Functions URL: https://us-central1-cloud-trading-bot-468900.cloudfunctions.net/api/health")
         print()
         print("=" * 60)
         return 1
