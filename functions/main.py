@@ -224,13 +224,19 @@ def handle_market_data(req):
         else:
             live_data = fetch_market_data(symbols)
         
-        if not live_data or not live_data.get('data'):
+        if not live_data or (isinstance(live_data, dict) and not live_data.get('data') and not any(key in live_data for key in ['AAPL', 'GOOGL', 'MSFT'])):
             raise Exception("No live data returned")
+        
+        # Handle both formats: {data: {...}} or direct symbol data
+        if 'data' in live_data:
+            data_section = live_data['data']
+        else:
+            data_section = live_data
         
         return jsonify({
             'timestamp': datetime.utcnow().isoformat() + 'Z',
             'symbols': symbols,
-            'data': live_data['data'],
+            'data': data_section,
             'source': 'live_data',
             'status': 'success'
         }), 200
@@ -256,8 +262,11 @@ def handle_market_trends(req):
         }), 503
     
     try:
-        # Use live data fetcher for market trends
-        live_trends = asyncio.run(fetch_market_trends())
+        # Use live data fetcher - handle both sync and async results
+        if asyncio.iscoroutinefunction(fetch_market_trends):
+            live_trends = asyncio.run(fetch_market_trends())
+        else:
+            live_trends = fetch_market_trends()
         
         if not live_trends:
             raise Exception("No live trends data returned")

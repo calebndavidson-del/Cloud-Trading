@@ -141,7 +141,19 @@ def fetch_market_trends() -> Dict[str, Any]:
             
             # Validate data freshness
             latest_timestamp = sp500_hist.index[-1].to_pydatetime()
-            age_seconds = (datetime.now() - latest_timestamp).total_seconds()
+            
+            # Ensure both timestamps are timezone-aware or both are naive
+            current_time = datetime.now()
+            if latest_timestamp.tzinfo is not None:
+                # If latest_timestamp has timezone info, make current_time timezone-aware
+                import pytz
+                current_time = current_time.replace(tzinfo=pytz.UTC)
+            else:
+                # If latest_timestamp is naive, strip timezone from both
+                latest_timestamp = latest_timestamp.replace(tzinfo=None)
+                current_time = current_time.replace(tzinfo=None)
+            
+            age_seconds = (current_time - latest_timestamp).total_seconds()
             
             if age_seconds > 300:  # 5 minutes max age
                 logger.warning(f"Market trend data is {age_seconds/60:.1f} minutes old")
