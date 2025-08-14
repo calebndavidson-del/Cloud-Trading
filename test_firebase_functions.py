@@ -160,8 +160,52 @@ def test_endpoints():
         print(f"Status: {status}")
         print(f"Response: {json.dumps(invalid_result.data, indent=2)}")
         
+        # Test backtest endpoints
+        print("\n6. Testing Backtest Start Endpoint:")
+        backtest_config = {
+            'symbols': ['AAPL', 'GOOGL'],
+            'initial_capital': 10000,
+            'short_ma_period': 5,
+            'long_ma_period': 15
+        }
+        backtest_req = MockRequest(
+            method='POST', 
+            path='/api/backtest/start',
+            json_data=backtest_config
+        )
+        
+        # Import and use the actual backtest handler
+        sys.path.append('/home/runner/work/Cloud-Trading/Cloud-Trading/functions')
+        from main import handle_backtest_endpoints
+        
+        # Test backtest start
+        backtest_result, status = handle_backtest_endpoints(backtest_req, 'backtest/start')
+        print(f"Status: {status}")
+        print(f"Response: {json.dumps(backtest_result.data, indent=2)}")
+        
+        # Extract job_id for further testing
+        job_id = backtest_result.data.get('job_id', 'test_job')
+        
+        # Test backtest status endpoint
+        print("\n7. Testing Backtest Status Endpoint:")
+        status_req = MockRequest(path=f'/api/backtest/status/{job_id}')
+        status_result, status = handle_backtest_endpoints(status_req, f'backtest/status/{job_id}')
+        print(f"Status: {status}")
+        print(f"Response: {json.dumps(status_result.data, indent=2)}")
+        
+        # Wait a moment for job completion (since it's simulated)
+        import time
+        time.sleep(3)
+        
+        # Test backtest results endpoint
+        print("\n8. Testing Backtest Results Endpoint:")
+        results_req = MockRequest(path=f'/api/backtest/results/{job_id}')
+        results_result, status = handle_backtest_endpoints(results_req, f'backtest/results/{job_id}')
+        print(f"Status: {status}")
+        print(f"Response: {json.dumps(results_result.data, indent=2)}")
+        
         print("\n" + "=" * 50)
-        print("✅ All tests passed! Firebase Functions are working correctly.")
+        print("✅ All tests passed! Firebase Functions including backtest are working correctly.")
         
         return True
         

@@ -157,6 +157,9 @@ class TradingBotOrchestrator:
         
         # RL Agents
         for agent_name, agent_config in models_config.get('rl_agents', {}).items():
+            # Initialize RL agent based on configuration
+            pass
+            
         # Initialize storage for predictors and RL agents
         self.predictors = {}
         self.rl_agents = {}
@@ -523,11 +526,7 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())ation': {},
-            'model_training': {},
-            'performance_logging': {}
-        }
-    }
+    asyncio.run(main())
     
     # Initialize and start the orchestrator
     orchestrator = TradingBotOrchestrator(config)
