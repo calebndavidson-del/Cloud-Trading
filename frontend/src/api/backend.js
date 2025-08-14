@@ -14,7 +14,7 @@
 
 // Configuration
 const API_CONFIG = {
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:8000/api',
+  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:8080/api',
   timeout: parseInt(process.env.REACT_APP_API_TIMEOUT) || 30000,
   retryAttempts: 3,
   retryDelay: 1000
@@ -217,7 +217,8 @@ export const backendAPI = {
    * Strategies
    */
   async getAvailableStrategies() {
-    return apiClient.get('/strategies');
+    const response = await apiClient.get('/strategies');
+    return response.strategies || [];
   },
 
   async getStrategyParameters(strategyName) {
@@ -229,7 +230,8 @@ export const backendAPI = {
   },
 
   async getStrategyParameterSpace(strategyName) {
-    return apiClient.get(`/strategies/${strategyName}/parameter-space`);
+    const response = await apiClient.get(`/strategies/${strategyName}/parameters`);
+    return response.parameter_space || {};
   },
 
   /**
