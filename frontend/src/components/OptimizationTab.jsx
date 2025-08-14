@@ -39,7 +39,7 @@ const OptimizationTab = ({ onRefresh, loading }) => {
       
       // Initialize parameter ranges with defaults
       const defaultRanges = {};
-      Object.keys(space).forEach(param => {
+      Object.keys(space || {}).forEach(param => {
         defaultRanges[param] = {
           min: space[param].min,
           max: space[param].max,
@@ -51,7 +51,13 @@ const OptimizationTab = ({ onRefresh, loading }) => {
         parameterRanges: defaultRanges
       }));
     } catch (error) {
-      // console.error('Failed to load parameter space:', error);
+      console.error('Failed to load parameter space:', error);
+      // Set empty parameter space on error
+      setParameterSpace({});
+      setOptimizationConfig(prev => ({
+        ...prev,
+        parameterRanges: {}
+      }));
     }
   }, []);
 
@@ -69,9 +75,23 @@ const OptimizationTab = ({ onRefresh, loading }) => {
           strategy: strategies[0].name
         }));
         loadParameterSpace(strategies[0].name);
+      } else {
+        console.warn('No strategies returned from API');
       }
     } catch (error) {
-      // console.error('Failed to load strategies:', error);
+      console.error('Failed to load strategies:', error);
+      // Set fallback strategies if API fails
+      const fallbackStrategies = [
+        { name: 'momentum_strategy', displayName: 'Momentum Strategy' },
+        { name: 'mean_reversion_strategy', displayName: 'Mean Reversion Strategy' },
+        { name: 'ml_strategy', displayName: 'Machine Learning Strategy' },
+        { name: 'risk_parity_strategy', displayName: 'Risk Parity Strategy' }
+      ];
+      setAvailableStrategies(fallbackStrategies);
+      setOptimizationConfig(prev => ({
+        ...prev,
+        strategy: fallbackStrategies[0].name
+      }));
     }
   }, [loadParameterSpace]);
 
@@ -200,11 +220,15 @@ const OptimizationTab = ({ onRefresh, loading }) => {
                   onChange={(e) => handleConfigChange('strategy', e.target.value)}
                   disabled={isRunning}
                 >
-                  {availableStrategies.map(strategy => (
-                    <option key={strategy.name} value={strategy.name}>
-                      {strategy.displayName}
-                    </option>
-                  ))}
+                  {availableStrategies.length === 0 ? (
+                    <option value="">Loading strategies...</option>
+                  ) : (
+                    availableStrategies.map(strategy => (
+                      <option key={strategy.name} value={strategy.name}>
+                        {strategy.displayName}
+                      </option>
+                    ))
+                  )}
                 </select>
               </div>
 
