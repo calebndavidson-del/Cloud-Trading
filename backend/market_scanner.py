@@ -381,17 +381,29 @@ class MarketScanner:
 
 
 def get_autonomous_stock_selection(max_stocks: int = 20, 
+                                 include_indices: bool = True,
                                  criteria: ScannerCriteria = None) -> List[str]:
     """
-    Get autonomous stock selection for trading
+    Autonomously select stocks for trading based on comprehensive market analysis.
+    
+    This function replaces hardcoded stock lists with intelligent market scanning.
+    Major indices are automatically included for benchmarking unless disabled.
     
     Args:
-        max_stocks: Maximum number of stocks to return
-        criteria: Custom scanning criteria
+        max_stocks: Maximum number of stocks to return (excluding indices)
+        include_indices: Whether to automatically include major indices for benchmarking
+        criteria: Custom scanning criteria, defaults to balanced criteria
         
     Returns:
-        List of stock symbols selected autonomously
+        List of stock symbols including major indices for comparison
     """
+    # Major indices for benchmarking - always include these for comparison
+    major_indices = ['SPY', 'QQQ', 'DIA', 'IWM', 'VTI'] if include_indices else []
+    
+    logger.info(f"Starting autonomous stock selection for {max_stocks} stocks")
+    if include_indices:
+        logger.info(f"Including major indices for benchmarking: {major_indices}")
+    
     scanner = MarketScanner()
     
     if criteria is None:
@@ -410,11 +422,16 @@ def get_autonomous_stock_selection(max_stocks: int = 20,
     # Extract symbols from top candidates
     symbols = [candidate.symbol for candidate in candidates]
     
-    logger.info(f"Autonomous selection complete: {len(symbols)} stocks selected")
-    for i, candidate in enumerate(candidates[:10]):  # Log top 10
-        logger.info(f"  {i+1}. {candidate.symbol} ({candidate.company_name}) - Score: {candidate.score:.1f}")
+    # Combine with major indices at the beginning for easy identification
+    final_symbols = major_indices + symbols
+    
+    logger.info(f"Autonomous selection complete: {len(symbols)} stocks + {len(major_indices)} indices selected")
+    if include_indices:
+        logger.info(f"Indices included: {major_indices}")
+    for i, candidate in enumerate(candidates[:10]):  # Log top 10 stocks
+        logger.info(f"  Stock {i+1}. {candidate.symbol} ({candidate.company_name}) - Score: {candidate.score:.1f}")
         
-    return symbols
+    return final_symbols
 
 
 if __name__ == "__main__":

@@ -780,6 +780,43 @@ def get_parameter_space() -> TradingParameterSpace:
     """
     return TradingParameterSpace()
 
+# Convenience functions for API endpoints
+def get_available_strategies():
+    """Get list of available trading strategies"""
+    return [
+        'momentum_strategy',
+        'mean_reversion_strategy', 
+        'ml_strategy',
+        'risk_parity_strategy'
+    ]
+
+def get_strategy_parameters(strategy_name: str):
+    """Get parameters for a specific strategy"""
+    param_space = get_parameter_space()
+    
+    strategy_mappings = {
+        'momentum_strategy': ['technical_indicators', 'strategy'],
+        'mean_reversion_strategy': ['strategy', 'risk_management'], 
+        'ml_strategy': ['rl_ml', 'feature_engineering'],
+        'risk_parity_strategy': ['risk_management', 'portfolio_optimization']
+    }
+    
+    categories = strategy_mappings.get(strategy_name, ['strategy'])
+    return param_space.get_parameter_space(categories)
+
+def get_all_parameters():
+    """Get all parameter categories and their parameters"""
+    param_space = get_parameter_space()
+    all_params = {}
+    
+    categories = ['rl_ml', 'technical_indicators', 'feature_engineering', 
+                 'strategy', 'risk_management', 'portfolio_optimization']
+    
+    for category in categories:
+        all_params[category] = param_space.get_parameter_space([category])
+    
+    return all_params
+
 
 # Example usage and testing functions
 if __name__ == "__main__":
