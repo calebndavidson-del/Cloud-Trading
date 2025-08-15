@@ -210,12 +210,22 @@ def show_live_trading():
     if market_data and 'data' in market_data:
         df = pd.DataFrame.from_dict(market_data['data'], orient='index')
         df['symbol'] = df.index
-        df = df[['symbol', 'price', 'change', 'volume']]
+        
+        # Select only available columns
+        available_columns = ['symbol', 'price']
+        for col in ['volume', 'high', 'low', 'open', 'market_cap']:
+            if col in df.columns:
+                available_columns.append(col)
+        
+        df = df[available_columns]
         
         # Format the dataframe for better display
-        df['price'] = df['price'].apply(lambda x: f"${x:.2f}")
-        df['change'] = df['change'].apply(lambda x: f"{x:+.2f}")
-        df['volume'] = df['volume'].apply(lambda x: f"{x:,}")
+        if 'price' in df.columns:
+            df['price'] = df['price'].apply(lambda x: f"${x:.2f}")
+        if 'volume' in df.columns:
+            df['volume'] = df['volume'].apply(lambda x: f"{x:,}")
+        if 'market_cap' in df.columns:
+            df['market_cap'] = df['market_cap'].apply(lambda x: f"${x/1e9:.2f}B")
         
         st.dataframe(df, use_container_width=True)
     else:
