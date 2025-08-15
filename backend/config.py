@@ -107,6 +107,7 @@ def get_config() -> Dict[str, Any]:
             "min_volume": MIN_VOLUME,
             "trading_enabled": TRADING_ENABLED,
             "paper_trading": PAPER_TRADING,
+            "default_symbols": FALLBACK_SYMBOLS,  # For API compatibility
             "fallback_symbols": FALLBACK_SYMBOLS
         },
         "logging": {
