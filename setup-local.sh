@@ -77,6 +77,10 @@ run_local() {
     
     export ENVIRONMENT=development
     export PYTHONPATH=.
+    if [ ! -f api.py ]; then
+        log_warn "api.py not found. Cannot start local development server."
+        exit 1
+    fi
     python api.py
 }
 
