@@ -1,2 +1,0 @@
-firebase-functions>=0.1.0
-flask>=2.0.0

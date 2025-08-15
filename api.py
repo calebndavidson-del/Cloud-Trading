@@ -5,7 +5,7 @@ Provides REST endpoints for the trading bot functionality
 import os
 import logging
 from datetime import datetime
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory, redirect
 from flask_cors import CORS
 from backend.bot import run_bot
 from backend.data_collector import fetch_market_data, fetch_market_trends
@@ -18,6 +18,22 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for frontend integration
+
+# Serve dashboard
+@app.route('/')
+def serve_dashboard():
+    """Serve the main dashboard"""
+    return send_from_directory('dashboard', 'index.html')
+
+@app.route('/dashboard')
+def redirect_to_dashboard():
+    """Redirect /dashboard to root"""
+    return redirect('/')
+
+@app.route('/dashboard/<path:filename>')
+def serve_dashboard_assets(filename):
+    """Serve dashboard static assets"""
+    return send_from_directory('dashboard', filename)
 
 @app.route('/health', methods=['GET'])
 def health_check():
