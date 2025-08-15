@@ -23,7 +23,11 @@ setup_local() {
     
     # Install Python dependencies
     log_info "Installing Python dependencies..."
-    pip install -r requirements.txt
+    if [ -f requirements.txt ]; then
+        pip install -r requirements.txt
+    else
+        log_warn "requirements.txt not found. Skipping Python dependency installation."
+    fi
     
     # Create .env file if it doesn't exist
     if [ ! -f .env ]; then
