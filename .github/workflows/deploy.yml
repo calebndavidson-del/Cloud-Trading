@@ -9,7 +9,7 @@ on:
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   SERVICE_NAME: cloud-trading-bot
-  REGION: us-central1
+  REGION: us-west1
 
 jobs:
   test:
