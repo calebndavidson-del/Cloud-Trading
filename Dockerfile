@@ -10,10 +10,10 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first to leverage Docker layer caching
-COPY requirements_Version9.txt .
+COPY requirements.txt .
 
 # Install Python dependencies
-RUN pip install --no-cache-dir -r requirements_Version9.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Install additional dependencies for web API
 RUN pip install --no-cache-dir flask flask-cors gunicorn
