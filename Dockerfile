@@ -7,16 +7,22 @@ WORKDIR /app
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     curl \
+    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first to leverage Docker layer caching
-COPY requirements_Version9.txt .
+# Set pip options to handle SSL issues
+ENV PIP_TRUSTED_HOST=pypi.org
+ENV PIP_TRUSTED_HOST=pypi.python.org
+ENV PIP_TRUSTED_HOST=files.pythonhosted.org
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements_Version9.txt
+# Copy requirements first to leverage Docker layer caching
+COPY requirements.txt .
+
+# Install Python dependencies with trusted hosts
+RUN pip install --trusted-host pypi.org --trusted-host pypi.python.org --trusted-host files.pythonhosted.org --no-cache-dir -r requirements.txt
 
 # Install additional dependencies for web API
-RUN pip install --no-cache-dir flask flask-cors gunicorn
+RUN pip install --trusted-host pypi.org --trusted-host pypi.python.org --trusted-host files.pythonhosted.org --no-cache-dir flask flask-cors gunicorn
 
 # Copy application code
 COPY . .
@@ -37,4 +43,4 @@ HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8080/health || exit 1
 
 # Run the web server
-CMD exec gunicorn --bind :${PORT:-8080} --workers 1 --threads 8 --timeout 0 api:app
+CMD ["sh", "-c", "exec gunicorn --bind :${PORT:-8080} --workers 1 --threads 8 --timeout 0 api:app"]

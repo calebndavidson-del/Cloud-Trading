@@ -1,0 +1,36 @@
+# Core trading dependencies
+yfinance
+requests
+beautifulsoup4
+pandas
+numpy
+scikit-learn
+optuna
+aiohttp
+
+# Web framework and API
+flask
+flask-cors
+gunicorn
+
+# Dashboard and visualization
+streamlit
+plotly
+matplotlib
+seaborn
+
+# Data processing and analysis
+scipy
+python-dateutil
+
+# Utilities
+python-dotenv
+pyyaml
+
+# Cloud and deployment
+google-cloud-storage
+google-cloud-logging
+
+# Development and testing
+pytest
+pytest-cov
