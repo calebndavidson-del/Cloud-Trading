@@ -1,0 +1,71 @@
+name: Test Production Deployment
+
+on:
+  workflow_dispatch:  # Manual trigger
+  schedule:
+    - cron: '0 */6 * * *'  # Run every 6 hours
+  push:
+    branches:
+      - main
+    paths:
+      - 'functions/**'
+      - 'frontend/**'
+      - '.github/workflows/firebase-hosting.yml'
+
+jobs:
+  test-production:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install test dependencies
+        run: |
+          pip install requests python-dateutil
+
+      - name: Setup custom environment for testing
+        run: |
+          echo "Setting up custom environment for production testing..."
+          # Configure network settings for CI environment
+          echo "CI=true" >> $GITHUB_ENV
+          echo "GITHUB_ACTIONS=true" >> $GITHUB_ENV
+          # Allow time for any recent deployments to propagate
+          echo "Waiting for deployment propagation..."
+          sleep 30
+
+      - name: Test production deployment
+        run: |
+          echo "Running production deployment tests..."
+          python test_production_deployment.py
+        env:
+          # Environment variables for testing
+          DEPLOYMENT_URL: https://cloud-trading-bot-468900.web.app
+          CI: true
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-test-results
+          path: |
+            test_production_deployment.py
+          retention-days: 7
+
+      - name: Comment on PR (if applicable)
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '🧪 Production deployment test completed. Check the Actions tab for detailed results.'
+            });

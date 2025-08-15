@@ -190,7 +190,7 @@ If you have real API keys, add them as Cloud Run environment variables:
 gcloud run deploy cloud-trading-bot \
     --image gcr.io/$PROJECT_ID/cloud-trading-bot:latest \
     --platform managed \
-    --region us-central1 \
+    --region us-west1 \
     --allow-unauthenticated \
     --set-env-vars "YAHOO_API_KEY=your_key,ALPHA_VANTAGE_KEY=your_key"
 ```
@@ -245,7 +245,7 @@ gcloud builds submit --tag gcr.io/$PROJECT_ID/cloud-trading-bot
 gcloud run deploy cloud-trading-bot \
     --image gcr.io/$PROJECT_ID/cloud-trading-bot \
     --platform managed \
-    --region us-central1 \
+    --region us-west1 \
     --allow-unauthenticated
 ```
 
