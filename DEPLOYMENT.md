@@ -51,7 +51,7 @@ In your GitHub repository, go to Settings > Secrets and Variables > Actions and 
 **Google Cloud Secrets:**
 ```
 GCP_PROJECT_ID=your-gcp-project-id
-GCP_SA_KEY=<service-account-json-key>
+GCP_SERVICE_ACCOUNT_KEY=<service-account-json-key>
 ```
 
 **Vercel Secrets:**
@@ -104,7 +104,7 @@ gcloud projects add-iam-policy-binding $GCP_PROJECT_ID \
 gcloud iam service-accounts keys create ~/key.json \
     --iam-account=$SA_EMAIL
 
-# Copy the content of ~/key.json for the GCP_SA_KEY secret
+# Copy the content of ~/key.json for the GCP_SERVICE_ACCOUNT_KEY secret
 cat ~/key.json
 ```
 
