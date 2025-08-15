@@ -12,7 +12,6 @@
     ]
   },
   "functions": {
-    "source": "../functions",
-    "runtime": "python310"
+    "source": "functions"
   }
 }
